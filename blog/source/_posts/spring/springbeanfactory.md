@@ -1,7 +1,8 @@
 ---
 title: Spring的BeanFactory和FactoryBean的关系
 date: 2022-07-16 17:14:57
-tags:
+tags: spring
+type: "spring"
 ---
 
 #### Spring的BeanFactory和FactoryBean的关系
@@ -394,4 +395,8 @@ T getObject() throws Exception;
 但对FactoryBean而言,这个Bean不是简单的Bean,而是一个能产生或者修饰对象生成的工厂Bean,
 它的实现与设计模式中的工厂模式和修饰器模式类似。
 用户使用容器时,可以使用转义符“＆”来得到FactoryBean本身,用来区分获取FactoryBean产生的对象和获取FactoryBean本身。
+
+
+
+
 
