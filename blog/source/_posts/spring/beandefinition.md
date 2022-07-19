@@ -97,6 +97,7 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 ```
 
 
+
 和这个类相关的有
 * @see org.springframework.beans.factory.support.RootBeanDefinition
 * @see org.springframework.beans.factory.support.ChildBeanDefinition
