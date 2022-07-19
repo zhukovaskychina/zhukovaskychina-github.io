@@ -3,6 +3,8 @@ title: Spring的BeanFactory和FactoryBean的关系
 date: 2022-07-16 17:14:57
 tags: spring
 type: "spring"
+description: "之前在脉脉上总是有人抱怨，面试的时候遇到傻逼面试官，喜欢问BeanFactory和FactoryBean之间的关系，如果长时间不关注这块，很容易卡壳，不知道这两者之间的区别。
+今天在这里给出这两个之间的差异。"
 ---
 
 #### Spring的BeanFactory和FactoryBean的关系

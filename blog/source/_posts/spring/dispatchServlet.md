@@ -3,6 +3,7 @@ title: DispatchServlet的源代码分析
 date: 2022-07-16 20:57:54
 tags: spring
 type: "spring"
+description: "DispatcherServlet是SpringMVC框架的核心之一，不少傻逼面试官喜欢围绕着这块问东问西。本文着重探讨下Spring的设计"
 ---
 
 ### DispatcherServlet的源代码分析

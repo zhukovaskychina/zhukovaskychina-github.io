@@ -3,6 +3,7 @@ title: transaction的分析
 date: 2022-07-16 20:57:54
 tags: spring
 type: "spring"
+description: "出去面试的时候，总是有一群傻逼面试官喜欢问Spring的事务有没有用过。今天这里对@Transactional进行一次源码分析。"
 ---
 
 ### Transaction的代码分析
