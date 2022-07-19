@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/zhukovaskychina-github.io/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/zhukovaskychina-github.io/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/zhukovaskychina-github.io/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/zhukovaskychina-github.io/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/zhukovaskychina-github.io/css/main.css">
+
+
+<link rel="stylesheet" href="/zhukovaskychina-github.io/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"zhukovaskychina.github.io","root":"/zhukovaskychina-github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="之前在脉脉上总是有人抱怨，面试的时候遇到傻逼面试官，喜欢问BeanFactory和FactoryBean之间的关系，如果长时间不关注这块，很容易卡壳，不知道这两者之间的区别。 今天在这里给出这两个之间的差异。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring的BeanFactory和FactoryBean的关系">
+<meta property="og:url" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/07/16/spring/springbeanfactory/index.html">
+<meta property="og:site_name" content="zhukovasky的博客">
+<meta property="og:description" content="之前在脉脉上总是有人抱怨，面试的时候遇到傻逼面试官，喜欢问BeanFactory和FactoryBean之间的关系，如果长时间不关注这块，很容易卡壳，不知道这两者之间的区别。 今天在这里给出这两个之间的差异。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/beanfactory.png">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/springfactorybean.png">
+<meta property="article:published_time" content="2022-07-16T09:14:57.000Z">
+<meta property="article:modified_time" content="2022-07-19T03:37:29.025Z">
+<meta property="article:author" content="zhukovasky">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/beanfactory.png">
+
+<link rel="canonical" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/07/16/spring/springbeanfactory/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring的BeanFactory和FactoryBean的关系 | zhukovasky的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/zhukovaskychina-github.io/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">zhukovasky的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">技术宅的世界</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/zhukovaskychina-github.io/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/zhukovaskychina-github.io/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/zhukovaskychina-github.io/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">1</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/zhukovaskychina-github.io/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">0</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">8</span></a>
+
+  </li>
+        <li class="menu-item menu-item-schedule">
+
+    <a href="/zhukovaskychina-github.io/schedule/" rel="section"><i class="fa fa-calendar fa-fw"></i>日程表</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+  <a href="https://github.com/zhukovaskychina" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/07/16/spring/springbeanfactory/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
+      <meta itemprop="name" content="zhukovasky">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zhukovasky的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring的BeanFactory和FactoryBean的关系
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-07-16 17:14:57" itemprop="dateCreated datePublished" datetime="2022-07-16T17:14:57+08:00">2022-07-16</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-07-19 11:37:29" itemprop="dateModified" datetime="2022-07-19T11:37:29+08:00">2022-07-19</time>
+              </span>
+
+          
+            <div class="post-description">之前在脉脉上总是有人抱怨，面试的时候遇到傻逼面试官，喜欢问BeanFactory和FactoryBean之间的关系，如果长时间不关注这块，很容易卡壳，不知道这两者之间的区别。 今天在这里给出这两个之间的差异。</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h4 id="Spring的BeanFactory和FactoryBean的关系"><a href="#Spring的BeanFactory和FactoryBean的关系" class="headerlink" title="Spring的BeanFactory和FactoryBean的关系"></a>Spring的BeanFactory和FactoryBean的关系</h4><p>之前在脉脉上总是有人抱怨，面试的时候遇到傻逼面试官，喜欢问BeanFactory和FactoryBean之间的关系，如果长时间不关注这块，很容易卡壳，不知道这两者之间的区别。<br>今天在这里给出这两个之间的差异。</p>
+<h6 id="BeanFactory的定义"><a href="#BeanFactory的定义" class="headerlink" title="BeanFactory的定义"></a>BeanFactory的定义</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">BeanFactory</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Used to dereference a &#123;<span class="doctag">@link</span> FactoryBean&#125; instance and distinguish it from</span></span><br><span class="line"><span class="comment">     * beans &lt;i&gt;created&lt;/i&gt; by the FactoryBean. For example, if the bean named</span></span><br><span class="line"><span class="comment">     * &#123;<span class="doctag">@code</span> myJndiObject&#125; is a FactoryBean, getting &#123;<span class="doctag">@code</span> &amp;myJndiObject&#125;</span></span><br><span class="line"><span class="comment">     * will return the factory, not the instance returned by the factory.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">String</span> <span class="variable">FACTORY_BEAN_PREFIX</span> <span class="operator">=</span> <span class="string">&quot;&amp;&quot;</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return an instance, which may be shared or independent, of the specified bean.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;This method allows a Spring BeanFactory to be used as a replacement for the</span></span><br><span class="line"><span class="comment">     * Singleton or Prototype design pattern. Callers may retain references to</span></span><br><span class="line"><span class="comment">     * returned objects in the case of Singleton beans.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to retrieve</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> an instance of the bean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the specified name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeansException if the bean could not be obtained</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    Object <span class="title function_">getBean</span><span class="params">(String name)</span> <span class="keyword">throws</span> BeansException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return an instance, which may be shared or independent, of the specified bean.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Behaves the same as &#123;<span class="doctag">@link</span> #getBean(String)&#125;, but provides a measure of type</span></span><br><span class="line"><span class="comment">     * safety by throwing a BeanNotOfRequiredTypeException if the bean is not of the</span></span><br><span class="line"><span class="comment">     * required type. This means that ClassCastException can&#x27;t be thrown on casting</span></span><br><span class="line"><span class="comment">     * the result correctly, as can happen with &#123;<span class="doctag">@link</span> #getBean(String)&#125;.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to retrieve</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requiredType type the bean must match; can be an interface or superclass</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> an instance of the bean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no such bean definition</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeanNotOfRequiredTypeException if the bean is not of the required type</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeansException if the bean could not be created</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    &lt;T&gt; T <span class="title function_">getBean</span><span class="params">(String name, Class&lt;T&gt; requiredType)</span> <span class="keyword">throws</span> BeansException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return an instance, which may be shared or independent, of the specified bean.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Allows for specifying explicit constructor arguments / factory method arguments,</span></span><br><span class="line"><span class="comment">     * overriding the specified default arguments (if any) in the bean definition.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to retrieve</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> args arguments to use when creating a bean instance using explicit arguments</span></span><br><span class="line"><span class="comment">     * (only applied when creating a new instance as opposed to retrieving an existing one)</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> an instance of the bean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no such bean definition</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeanDefinitionStoreException if arguments have been given but</span></span><br><span class="line"><span class="comment">     * the affected bean isn&#x27;t a prototype</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeansException if the bean could not be created</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 2.5</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    Object <span class="title function_">getBean</span><span class="params">(String name, Object... args)</span> <span class="keyword">throws</span> BeansException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return the bean instance that uniquely matches the given object type, if any.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;This method goes into &#123;<span class="doctag">@link</span> ListableBeanFactory&#125; by-type lookup territory</span></span><br><span class="line"><span class="comment">     * but may also be translated into a conventional by-name lookup based on the name</span></span><br><span class="line"><span class="comment">     * of the given type. For more extensive retrieval operations across sets of beans,</span></span><br><span class="line"><span class="comment">     * use &#123;<span class="doctag">@link</span> ListableBeanFactory&#125; and/or &#123;<span class="doctag">@link</span> BeanFactoryUtils&#125;.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requiredType type the bean must match; can be an interface or superclass</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> an instance of the single bean matching the required type</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if no bean of the given type was found</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoUniqueBeanDefinitionException if more than one bean of the given type was found</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeansException if the bean could not be created</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 3.0</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> ListableBeanFactory</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    &lt;T&gt; T <span class="title function_">getBean</span><span class="params">(Class&lt;T&gt; requiredType)</span> <span class="keyword">throws</span> BeansException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return an instance, which may be shared or independent, of the specified bean.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Allows for specifying explicit constructor arguments / factory method arguments,</span></span><br><span class="line"><span class="comment">     * overriding the specified default arguments (if any) in the bean definition.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;This method goes into &#123;<span class="doctag">@link</span> ListableBeanFactory&#125; by-type lookup territory</span></span><br><span class="line"><span class="comment">     * but may also be translated into a conventional by-name lookup based on the name</span></span><br><span class="line"><span class="comment">     * of the given type. For more extensive retrieval operations across sets of beans,</span></span><br><span class="line"><span class="comment">     * use &#123;<span class="doctag">@link</span> ListableBeanFactory&#125; and/or &#123;<span class="doctag">@link</span> BeanFactoryUtils&#125;.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requiredType type the bean must match; can be an interface or superclass</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> args arguments to use when creating a bean instance using explicit arguments</span></span><br><span class="line"><span class="comment">     * (only applied when creating a new instance as opposed to retrieving an existing one)</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> an instance of the bean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no such bean definition</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeanDefinitionStoreException if arguments have been given but</span></span><br><span class="line"><span class="comment">     * the affected bean isn&#x27;t a prototype</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeansException if the bean could not be created</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 4.1</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    &lt;T&gt; T <span class="title function_">getBean</span><span class="params">(Class&lt;T&gt; requiredType, Object... args)</span> <span class="keyword">throws</span> BeansException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return a provider for the specified bean, allowing for lazy on-demand retrieval</span></span><br><span class="line"><span class="comment">     * of instances, including availability and uniqueness options.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requiredType type the bean must match; can be an interface or superclass</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> a corresponding provider handle</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 5.1</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBeanProvider(ResolvableType)</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    &lt;T&gt; ObjectProvider&lt;T&gt; <span class="title function_">getBeanProvider</span><span class="params">(Class&lt;T&gt; requiredType)</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return a provider for the specified bean, allowing for lazy on-demand retrieval</span></span><br><span class="line"><span class="comment">     * of instances, including availability and uniqueness options.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> requiredType type the bean must match; can be a generic type declaration.</span></span><br><span class="line"><span class="comment">     * Note that collection types are not supported here, in contrast to reflective</span></span><br><span class="line"><span class="comment">     * injection points. For programmatically retrieving a list of beans matching a</span></span><br><span class="line"><span class="comment">     * specific type, specify the actual bean type as an argument here and subsequently</span></span><br><span class="line"><span class="comment">     * use &#123;<span class="doctag">@link</span> ObjectProvider#orderedStream()&#125; or its lazy streaming/iteration options.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> a corresponding provider handle</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 5.1</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> ObjectProvider#iterator()</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> ObjectProvider#stream()</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> ObjectProvider#orderedStream()</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    &lt;T&gt; ObjectProvider&lt;T&gt; <span class="title function_">getBeanProvider</span><span class="params">(ResolvableType requiredType)</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Does this bean factory contain a bean definition or externally registered singleton</span></span><br><span class="line"><span class="comment">     * instance with the given name?</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;If the given name is an alias, it will be translated back to the corresponding</span></span><br><span class="line"><span class="comment">     * canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;If this factory is hierarchical, will ask any parent factory if the bean cannot</span></span><br><span class="line"><span class="comment">     * be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;If a bean definition or singleton instance matching the given name is found,</span></span><br><span class="line"><span class="comment">     * this method will return &#123;<span class="doctag">@code</span> true&#125; whether the named bean definition is concrete</span></span><br><span class="line"><span class="comment">     * or abstract, lazy or eager, in scope or not. Therefore, note that a &#123;<span class="doctag">@code</span> true&#125;</span></span><br><span class="line"><span class="comment">     * return value from this method does not necessarily indicate that &#123;<span class="doctag">@link</span> #getBean&#125;</span></span><br><span class="line"><span class="comment">     * will be able to obtain an instance for the same name.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> whether a bean with the given name is present</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">boolean</span> <span class="title function_">containsBean</span><span class="params">(String name)</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Is this bean a shared singleton? That is, will &#123;<span class="doctag">@link</span> #getBean&#125; always</span></span><br><span class="line"><span class="comment">     * return the same instance?</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Note: This method returning &#123;<span class="doctag">@code</span> false&#125; does not clearly indicate</span></span><br><span class="line"><span class="comment">     * independent instances. It indicates non-singleton instances, which may correspond</span></span><br><span class="line"><span class="comment">     * to a scoped bean as well. Use the &#123;<span class="doctag">@link</span> #isPrototype&#125; operation to explicitly</span></span><br><span class="line"><span class="comment">     * check for independent instances.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> whether this bean corresponds to a singleton instance</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the given name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #isPrototype</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">boolean</span> <span class="title function_">isSingleton</span><span class="params">(String name)</span> <span class="keyword">throws</span> NoSuchBeanDefinitionException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Is this bean a prototype? That is, will &#123;<span class="doctag">@link</span> #getBean&#125; always return</span></span><br><span class="line"><span class="comment">     * independent instances?</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Note: This method returning &#123;<span class="doctag">@code</span> false&#125; does not clearly indicate</span></span><br><span class="line"><span class="comment">     * a singleton object. It indicates non-independent instances, which may correspond</span></span><br><span class="line"><span class="comment">     * to a scoped bean as well. Use the &#123;<span class="doctag">@link</span> #isSingleton&#125; operation to explicitly</span></span><br><span class="line"><span class="comment">     * check for a shared singleton instance.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> whether this bean will always deliver independent instances</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the given name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 2.0.3</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #isSingleton</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">boolean</span> <span class="title function_">isPrototype</span><span class="params">(String name)</span> <span class="keyword">throws</span> NoSuchBeanDefinitionException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Check whether the bean with the given name matches the specified type.</span></span><br><span class="line"><span class="comment">     * More specifically, check whether a &#123;<span class="doctag">@link</span> #getBean&#125; call for the given name</span></span><br><span class="line"><span class="comment">     * would return an object that is assignable to the specified target type.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> typeToMatch the type to match against (as a &#123;<span class="doctag">@code</span> ResolvableType&#125;)</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> &#123;<span class="doctag">@code</span> true&#125; if the bean type matches,</span></span><br><span class="line"><span class="comment">     * &#123;<span class="doctag">@code</span> false&#125; if it doesn&#x27;t match or cannot be determined yet</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the given name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 4.2</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getType</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">boolean</span> <span class="title function_">isTypeMatch</span><span class="params">(String name, ResolvableType typeToMatch)</span> <span class="keyword">throws</span> NoSuchBeanDefinitionException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Check whether the bean with the given name matches the specified type.</span></span><br><span class="line"><span class="comment">     * More specifically, check whether a &#123;<span class="doctag">@link</span> #getBean&#125; call for the given name</span></span><br><span class="line"><span class="comment">     * would return an object that is assignable to the specified target type.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> typeToMatch the type to match against (as a &#123;<span class="doctag">@code</span> Class&#125;)</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> &#123;<span class="doctag">@code</span> true&#125; if the bean type matches,</span></span><br><span class="line"><span class="comment">     * &#123;<span class="doctag">@code</span> false&#125; if it doesn&#x27;t match or cannot be determined yet</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the given name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 2.0.1</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getType</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">boolean</span> <span class="title function_">isTypeMatch</span><span class="params">(String name, Class&lt;?&gt; typeToMatch)</span> <span class="keyword">throws</span> NoSuchBeanDefinitionException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Determine the type of the bean with the given name. More specifically,</span></span><br><span class="line"><span class="comment">     * determine the type of object that &#123;<span class="doctag">@link</span> #getBean&#125; would return for the given name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;For a &#123;<span class="doctag">@link</span> FactoryBean&#125;, return the type of object that the FactoryBean creates,</span></span><br><span class="line"><span class="comment">     * as exposed by &#123;<span class="doctag">@link</span> FactoryBean#getObjectType()&#125;. This may lead to the initialization</span></span><br><span class="line"><span class="comment">     * of a previously uninitialized &#123;<span class="doctag">@code</span> FactoryBean&#125; (see &#123;<span class="doctag">@link</span> #getType(String, boolean)&#125;).</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> the type of the bean, or &#123;<span class="doctag">@code</span> null&#125; if not determinable</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the given name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 1.1.2</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #isTypeMatch</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Nullable</span></span><br><span class="line">    Class&lt;?&gt; getType(String name) <span class="keyword">throws</span> NoSuchBeanDefinitionException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Determine the type of the bean with the given name. More specifically,</span></span><br><span class="line"><span class="comment">     * determine the type of object that &#123;<span class="doctag">@link</span> #getBean&#125; would return for the given name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;For a &#123;<span class="doctag">@link</span> FactoryBean&#125;, return the type of object that the FactoryBean creates,</span></span><br><span class="line"><span class="comment">     * as exposed by &#123;<span class="doctag">@link</span> FactoryBean#getObjectType()&#125;. Depending on the</span></span><br><span class="line"><span class="comment">     * &#123;<span class="doctag">@code</span> allowFactoryBeanInit&#125; flag, this may lead to the initialization of a previously</span></span><br><span class="line"><span class="comment">     * uninitialized &#123;<span class="doctag">@code</span> FactoryBean&#125; if no early type information is available.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Translates aliases back to the corresponding canonical bean name.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the name of the bean to query</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> allowFactoryBeanInit whether a &#123;<span class="doctag">@code</span> FactoryBean&#125; may get initialized</span></span><br><span class="line"><span class="comment">     * just for the purpose of determining its object type</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> the type of the bean, or &#123;<span class="doctag">@code</span> null&#125; if not determinable</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> NoSuchBeanDefinitionException if there is no bean with the given name</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@since</span> 5.2</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #isTypeMatch</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Nullable</span></span><br><span class="line">    Class&lt;?&gt; getType(String name, <span class="type">boolean</span> allowFactoryBeanInit) <span class="keyword">throws</span> NoSuchBeanDefinitionException;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Return the aliases for the given bean name, if any.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;All of those aliases point to the same bean when used in a &#123;<span class="doctag">@link</span> #getBean&#125; call.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;If the given name is an alias, the corresponding original bean name</span></span><br><span class="line"><span class="comment">     * and other aliases (if any) will be returned, with the original bean name</span></span><br><span class="line"><span class="comment">     * being the first element in the array.</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;Will ask the parent factory if the bean cannot be found in this factory instance.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> name the bean name to check for aliases</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> the aliases, or an empty array if none</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@see</span> #getBean</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    String[] getAliases(String name);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h6 id="FactoryBean的定义"><a href="#FactoryBean的定义" class="headerlink" title="FactoryBean的定义"></a>FactoryBean的定义</h6><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">FactoryBean</span>&lt;T&gt; &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * The name of an attribute that can be</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> org.springframework.core.AttributeAccessor#setAttribute set&#125; on a</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> org.springframework.beans.factory.config.BeanDefinition&#125; so that</span></span><br><span class="line"><span class="comment">	 * factory beans can signal their object type when it can&#x27;t be deduced from</span></span><br><span class="line"><span class="comment">	 * the factory bean class.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@since</span> 5.2</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="type">String</span> <span class="variable">OBJECT_TYPE_ATTRIBUTE</span> <span class="operator">=</span> <span class="string">&quot;factoryBeanObjectType&quot;</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Return an instance (possibly shared or independent) of the object</span></span><br><span class="line"><span class="comment">	 * managed by this factory.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;As with a &#123;<span class="doctag">@link</span> BeanFactory&#125;, this allows support for both the</span></span><br><span class="line"><span class="comment">	 * Singleton and Prototype design pattern.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;If this FactoryBean is not fully initialized yet at the time of</span></span><br><span class="line"><span class="comment">	 * the call (for example because it is involved in a circular reference),</span></span><br><span class="line"><span class="comment">	 * throw a corresponding &#123;<span class="doctag">@link</span> FactoryBeanNotInitializedException&#125;.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;As of Spring 2.0, FactoryBeans are allowed to return &#123;<span class="doctag">@code</span> null&#125;</span></span><br><span class="line"><span class="comment">	 * objects. The factory will consider this as normal value to be used; it</span></span><br><span class="line"><span class="comment">	 * will not throw a FactoryBeanNotInitializedException in this case anymore.</span></span><br><span class="line"><span class="comment">	 * FactoryBean implementations are encouraged to throw</span></span><br><span class="line"><span class="comment">	 * FactoryBeanNotInitializedException themselves now, as appropriate.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> an instance of the bean (can be &#123;<span class="doctag">@code</span> null&#125;)</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@throws</span> Exception in case of creation errors</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@see</span> FactoryBeanNotInitializedException</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	T <span class="title function_">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Return the type of object that this FactoryBean creates,</span></span><br><span class="line"><span class="comment">	 * or &#123;<span class="doctag">@code</span> null&#125; if not known in advance.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;This allows one to check for specific types of beans without</span></span><br><span class="line"><span class="comment">	 * instantiating objects, for example on autowiring.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;In the case of implementations that are creating a singleton object,</span></span><br><span class="line"><span class="comment">	 * this method should try to avoid singleton creation as far as possible;</span></span><br><span class="line"><span class="comment">	 * it should rather estimate the type in advance.</span></span><br><span class="line"><span class="comment">	 * For prototypes, returning a meaningful type here is advisable too.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;This method can be called &lt;i&gt;before&lt;/i&gt; this FactoryBean has</span></span><br><span class="line"><span class="comment">	 * been fully initialized. It must not rely on state created during</span></span><br><span class="line"><span class="comment">	 * initialization; of course, it can still use such state if available.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;&lt;b&gt;<span class="doctag">NOTE:</span>&lt;/b&gt; Autowiring will simply ignore FactoryBeans that return</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@code</span> null&#125; here. Therefore it is highly recommended to implement</span></span><br><span class="line"><span class="comment">	 * this method properly, using the current state of the FactoryBean.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> the type of object that this FactoryBean creates,</span></span><br><span class="line"><span class="comment">	 * or &#123;<span class="doctag">@code</span> null&#125; if not known at the time of the call</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@see</span> ListableBeanFactory#getBeansOfType</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	Class&lt;?&gt; getObjectType();</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Is the object managed by this factory a singleton? That is,</span></span><br><span class="line"><span class="comment">	 * will &#123;<span class="doctag">@link</span> #getObject()&#125; always return the same object</span></span><br><span class="line"><span class="comment">	 * (a reference that can be cached)?</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;&lt;b&gt;<span class="doctag">NOTE:</span>&lt;/b&gt; If a FactoryBean indicates to hold a singleton object,</span></span><br><span class="line"><span class="comment">	 * the object returned from &#123;<span class="doctag">@code</span> getObject()&#125; might get cached</span></span><br><span class="line"><span class="comment">	 * by the owning BeanFactory. Hence, do not return &#123;<span class="doctag">@code</span> true&#125;</span></span><br><span class="line"><span class="comment">	 * unless the FactoryBean always exposes the same reference.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;The singleton status of the FactoryBean itself will generally</span></span><br><span class="line"><span class="comment">	 * be provided by the owning BeanFactory; usually, it has to be</span></span><br><span class="line"><span class="comment">	 * defined as singleton there.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;&lt;b&gt;<span class="doctag">NOTE:</span>&lt;/b&gt; This method returning &#123;<span class="doctag">@code</span> false&#125; does not</span></span><br><span class="line"><span class="comment">	 * necessarily indicate that returned objects are independent instances.</span></span><br><span class="line"><span class="comment">	 * An implementation of the extended &#123;<span class="doctag">@link</span> SmartFactoryBean&#125; interface</span></span><br><span class="line"><span class="comment">	 * may explicitly indicate independent instances through its</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> SmartFactoryBean#isPrototype()&#125; method. Plain &#123;<span class="doctag">@link</span> FactoryBean&#125;</span></span><br><span class="line"><span class="comment">	 * implementations which do not implement this extended interface are</span></span><br><span class="line"><span class="comment">	 * simply assumed to always return independent instances if the</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@code</span> isSingleton()&#125; implementation returns &#123;<span class="doctag">@code</span> false&#125;.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;The default implementation returns &#123;<span class="doctag">@code</span> true&#125;, since a</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@code</span> FactoryBean&#125; typically manages a singleton instance.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> whether the exposed object is a singleton</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@see</span> #getObject()</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@see</span> SmartFactoryBean#isPrototype()</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">default</span> <span class="type">boolean</span> <span class="title function_">isSingleton</span><span class="params">()</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>如上所示，BeanFactory和FactoryBean在接口的定义上，有很大的差别。BeanFactory定义了Bean容器的获取行为如<br><br><br><code>&lt;T&gt; T getBean(String name, Class&lt;T&gt; requiredType)</code><br><br><code>boolean isSingleton(String name)</code> <br><br><code>boolean isPrototype(String name)</code><br><br>等行为。而FactoryBean则是另外与之不同的行为。如下所示<br><br></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">@Nullable</span><br><span class="line">T getObject() throws Exception;</span><br></pre></td></tr></table></figure>
+<p>则是返回由该工厂管理的bean实例对象。<br>由此可见，BeanFactory是定义了容器行为的接口，而FactoryBean则是工厂bean的接口定义。</p>
+<h6 id="beanFactory和factoryBean的实现类"><a href="#beanFactory和factoryBean的实现类" class="headerlink" title="beanFactory和factoryBean的实现类"></a>beanFactory和factoryBean的实现类</h6><h6 id="beanFactory类继承关系图"><a href="#beanFactory类继承关系图" class="headerlink" title="beanFactory类继承关系图"></a>beanFactory类继承关系图</h6><p><img data-src="/zhukovaskychina-github.io/././images/beanfactory.png" alt="beanFactory类继承关系图"></p>
+<h6 id="factoryBean类继承关系图"><a href="#factoryBean类继承关系图" class="headerlink" title="factoryBean类继承关系图"></a>factoryBean类继承关系图</h6><p><img data-src="/zhukovaskychina-github.io/././images/springfactorybean.png" alt="factoryBean类继承关系图"></p>
+<h5 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h5><p>在Spring中,所有的Bean都是由BeanFactory（也就是IoC容器）来进行管理的。<br>但对FactoryBean而言,这个Bean不是简单的Bean,而是一个能产生或者修饰对象生成的工厂Bean,<br>它的实现与设计模式中的工厂模式和修饰器模式类似。<br>用户使用容器时,可以使用转义符“＆”来得到FactoryBean本身,用来区分获取FactoryBean产生的对象和获取FactoryBean本身。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/zhukovaskychina-github.io/tags/spring/" rel="tag"># spring</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/zhukovaskychina-github.io/2022/07/16/leetcode/" rel="prev" title="leetcode">
+      <i class="fa fa-chevron-left"></i> leetcode
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/zhukovaskychina-github.io/2022/07/16/spring/transaction/" rel="next" title="transaction的分析">
+      transaction的分析 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Spring%E7%9A%84BeanFactory%E5%92%8CFactoryBean%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="nav-number">1.</span> <span class="nav-text">Spring的BeanFactory和FactoryBean的关系</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#BeanFactory%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="nav-number">1.0.1.</span> <span class="nav-text">BeanFactory的定义</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#FactoryBean%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="nav-number">1.0.2.</span> <span class="nav-text">FactoryBean的定义</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#beanFactory%E5%92%8CfactoryBean%E7%9A%84%E5%AE%9E%E7%8E%B0%E7%B1%BB"><span class="nav-number">1.0.3.</span> <span class="nav-text">beanFactory和factoryBean的实现类</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#beanFactory%E7%B1%BB%E7%BB%A7%E6%89%BF%E5%85%B3%E7%B3%BB%E5%9B%BE"><span class="nav-number">1.0.4.</span> <span class="nav-text">beanFactory类继承关系图</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#factoryBean%E7%B1%BB%E7%BB%A7%E6%89%BF%E5%85%B3%E7%B3%BB%E5%9B%BE"><span class="nav-number">1.0.5.</span> <span class="nav-text">factoryBean类继承关系图</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">1.1.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">zhukovasky</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/zhukovaskychina-github.io/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/zhukovaskychina" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;zhukovaskychina" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhukovasky</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/zhukovaskychina-github.io/lib/anime.min.js"></script>
+  <script src="/zhukovaskychina-github.io/lib/pjax/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/zhukovaskychina-github.io/lib/velocity/velocity.min.js"></script>
+  <script src="/zhukovaskychina-github.io/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/zhukovaskychina-github.io/js/utils.js"></script>
+
+<script src="/zhukovaskychina-github.io/js/motion.js"></script>
+
+
+<script src="/zhukovaskychina-github.io/js/schemes/pisces.js"></script>
+
+
+<script src="/zhukovaskychina-github.io/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout : 3000,
+        priority: true,
+        ignores : [uri => uri.includes('#'),uri => uri === 'https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/07/16/spring/springbeanfactory/',]
+      });
+      });
+  </script>
+
+    </div>
+</body>
+</html>
