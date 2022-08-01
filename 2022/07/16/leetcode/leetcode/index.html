@@ -20,18 +20,20 @@
     var CONFIG = {"hostname":"zhukovaskychina.github.io","root":"/zhukovaskychina-github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="技术宅的世界">
+  <meta name="description" content="出去面试有面试官喜欢问leetcode">
 <meta property="og:type" content="article">
-<meta property="og:title" content="leetcode">
+<meta property="og:title" content="力扣">
 <meta property="og:url" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/07/16/leetcode/leetcode/index.html">
 <meta property="og:site_name" content="zhukovasky的博客">
-<meta property="og:description" content="技术宅的世界">
+<meta property="og:description" content="出去面试有面试官喜欢问leetcode">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/leetcode/leetcode92.png">
 <meta property="article:published_time" content="2022-07-16T09:14:46.000Z">
-<meta property="article:modified_time" content="2022-07-19T08:52:15.066Z">
+<meta property="article:modified_time" content="2022-08-01T06:33:43.788Z">
 <meta property="article:author" content="zhukovasky">
 <meta property="article:tag" content="leetcode">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/leetcode/leetcode92.png">
 
 <link rel="canonical" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/07/16/leetcode/leetcode/">
 
@@ -46,7 +48,7 @@
   };
 </script>
 
-  <title>leetcode | zhukovasky的博客</title>
+  <title>力扣 | zhukovasky的博客</title>
   
 
 
@@ -121,7 +123,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">13</span></a>
+    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">16</span></a>
 
   </li>
   </ul>
@@ -167,7 +169,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          leetcode
+          力扣
         </h1>
 
         <div class="post-meta">
@@ -184,7 +186,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-07-19 16:52:15" itemprop="dateModified" datetime="2022-07-19T16:52:15+08:00">2022-07-19</time>
+                <time title="修改时间：2022-08-01 14:33:43" itemprop="dateModified" datetime="2022-08-01T14:33:43+08:00">2022-08-01</time>
               </span>
 
           
@@ -195,6 +197,7 @@
               <span class="post-meta-item-text">阅读次数：</span>
               <span id="busuanzi_value_page_pv"></span>
             </span>
+            <div class="post-description">出去面试有面试官喜欢问leetcode</div>
 
         </div>
       </header>
@@ -205,7 +208,59 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        
+        <h3 id="力扣92题"><a href="#力扣92题" class="headerlink" title="力扣92题"></a>力扣92题</h3><p>给你单链表的头指针 head 和两个整数 left 和 right ，其中 left &lt;&#x3D; right 。请你反转从位置 left 到位置 right 的链表节点，返回 反转后的链表 。</p>
+<p><img src="/zhukovaskychina-github.io/././images/leetcode/leetcode92.png" alt="反转链表"></p>
+<pre class="line-numbers language-none"><code class="language-none">示例 1：
+输入：head &#x3D; [1,2,3,4,5], left &#x3D; 2, right &#x3D; 4 
+输出：[1,4,3,2,5]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<pre class="line-numbers language-none"><code class="language-none">示例 2：
+
+输入：head &#x3D; [5], left &#x3D; 1, right &#x3D; 1
+输出：[5]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-none"><code class="language-none">提示：
+
+链表中节点数目为 n
+1 &lt;&#x3D; n &lt;&#x3D; 500
+-500 &lt;&#x3D; Node.val &lt;&#x3D; 500
+1 &lt;&#x3D; left &lt;&#x3D; right &lt;&#x3D; n
+
+
+进阶： 你可以使用一趟扫描完成反转吗？
+
+
+来源：力扣（LeetCode）
+链接：https:&#x2F;&#x2F;leetcode.cn&#x2F;problems&#x2F;reverse-linked-list-ii
+著作权归领扣网络所有。商业转载请联系官方授权，非商业转载请注明出处。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h4 id="92题解题思路如下"><a href="#92题解题思路如下" class="headerlink" title="92题解题思路如下"></a>92题解题思路如下</h4><p>充分利用链表相关特性，以及反转链表，那么自然而然会想到递归。我们不需要自己实现一个栈，我们利用java的函数执行栈来完成相关的操作。<br>即：<br><br>*遍历该栈使用函数递归的方式；<br>*java函数执行栈出栈的时候，构造一个ListNode;<br>注意位置。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">class</span> <span class="token class-name">Solution</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">ListNode</span> <span class="token function">reverseBetween</span><span class="token punctuation">(</span><span class="token class-name">ListNode</span> head<span class="token punctuation">,</span> <span class="token keyword">int</span> left<span class="token punctuation">,</span> <span class="token keyword">int</span> right<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">ListNode</span> headCurr<span class="token operator">=</span>head<span class="token punctuation">;</span>
+       <span class="token keyword">return</span>  <span class="token function">recursiveLeftList</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">,</span>headCurr<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>left<span class="token punctuation">,</span>right<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">private</span> <span class="token class-name">ListNode</span> <span class="token function">recursiveLeftList</span><span class="token punctuation">(</span><span class="token class-name">ListNode</span> parent<span class="token punctuation">,</span><span class="token class-name">ListNode</span> head<span class="token punctuation">,</span><span class="token keyword">int</span> index<span class="token punctuation">,</span><span class="token keyword">int</span> left<span class="token punctuation">,</span><span class="token keyword">int</span> right<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>head<span class="token operator">==</span><span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> parent<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token class-name">ListNode</span> lastNode<span class="token operator">=</span><span class="token function">recursiveLeftList</span><span class="token punctuation">(</span>head<span class="token punctuation">,</span>head<span class="token punctuation">.</span>next<span class="token punctuation">,</span>index<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">,</span>left<span class="token punctuation">,</span>right<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>index<span class="token operator">&lt;</span>right<span class="token operator">&amp;&amp;</span>index<span class="token operator">>=</span>left<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+            parent<span class="token punctuation">.</span>next<span class="token operator">=</span>head<span class="token punctuation">.</span>next<span class="token punctuation">;</span>
+            head<span class="token punctuation">.</span>next<span class="token operator">=</span>parent<span class="token punctuation">;</span>
+            parent<span class="token operator">=</span>lastNode<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token keyword">else</span><span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>parent<span class="token operator">!=</span><span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+                parent<span class="token punctuation">.</span>next<span class="token operator">=</span>lastNode<span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span><span class="token keyword">else</span><span class="token punctuation">&#123;</span>
+                parent<span class="token operator">=</span>lastNode<span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">return</span> parent<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
     </div>
 
     
@@ -285,6 +340,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9B%E6%89%A392%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">力扣92题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#92%E9%A2%98%E8%A7%A3%E9%A2%98%E6%80%9D%E8%B7%AF%E5%A6%82%E4%B8%8B"><span class="nav-number">1.1.</span> <span class="nav-text">92题解题思路如下</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -298,12 +354,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/zhukovaskychina-github.io/archives/">
         
-          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-count">16</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">标签</span>
       </div>
   </nav>
