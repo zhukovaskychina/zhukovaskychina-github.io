@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/zhukovaskychina-github.io/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/zhukovaskychina-github.io/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/zhukovaskychina-github.io/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/zhukovaskychina-github.io/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/zhukovaskychina-github.io/css/main.css">
+
+
+<link rel="stylesheet" href="/zhukovaskychina-github.io/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"zhukovaskychina.github.io","root":"/zhukovaskychina-github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="出去面试的时候，总是有一群面试官喜欢问Spring的事务有没有用过。今天这里对@Transactional进行一次源码分析。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="transaction的分析">
+<meta property="og:url" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/02/spring/transaction-second/index.html">
+<meta property="og:site_name" content="zhukovasky的博客">
+<meta property="og:description" content="出去面试的时候，总是有一群面试官喜欢问Spring的事务有没有用过。今天这里对@Transactional进行一次源码分析。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/transactionManager.png">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/AbstractPlatformTransactionManager.png">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/transactionDefinition.png">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/transactionInterceptor.png">
+<meta property="article:published_time" content="2022-08-02T12:57:54.000Z">
+<meta property="article:modified_time" content="2022-08-04T07:21:12.367Z">
+<meta property="article:author" content="zhukovasky">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/transactionManager.png">
+
+<link rel="canonical" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/02/spring/transaction-second/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>transaction的分析 | zhukovasky的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/zhukovaskychina-github.io/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">zhukovasky的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">技术宅的世界</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/zhukovaskychina-github.io/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">17</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/zhukovaskychina" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/02/spring/transaction-second/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
+      <meta itemprop="name" content="zhukovasky">
+      <meta itemprop="description" content="技术宅的世界">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zhukovasky的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          transaction的分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-08-02 20:57:54" itemprop="dateCreated datePublished" datetime="2022-08-02T20:57:54+08:00">2022-08-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-08-04 15:21:12" itemprop="dateModified" datetime="2022-08-04T15:21:12+08:00">2022-08-04</time>
+              </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
+            <div class="post-description">出去面试的时候，总是有一群面试官喜欢问Spring的事务有没有用过。今天这里对@Transactional进行一次源码分析。</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>#使用Spring 事务</p>
+<p>基于传统的Spring MVC,我们有如下的配置</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token prolog">&lt;?xml version="1.0" encoding="UTF-8"?></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>beans</span> <span class="token attr-name">xmlns</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://www.springframework.org/schema/beans<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">xmlns:</span>xsi</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://www.w3.org/2001/XMLSchema-instance<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">xmlns:</span>tx</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://www.springframework.org/schema/tx<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">xmlns:</span>aop</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://www.springframework.org/schema/aop<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">xsi:</span>schemaLocation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>
+http://www.springframework.org/schema/beans 
+http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+http://www.springframework.org/schema/tx 
+http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+http://www.springframework.org/schema/aop 
+http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>bean</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>dataSource<span class="token punctuation">"</span></span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>com.alibaba.druid.pool.DruidDataSource<span class="token punctuation">"</span></span> <span class="token attr-name">init-method</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>init<span class="token punctuation">"</span></span> <span class="token attr-name">destroy-method</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>close<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>url<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>$&#123;jdbc_url&#125;<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>username<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>$&#123;jdbc_username&#125;<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>password<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>$&#123;jdbc_password&#125;<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>bean</span><span class="token punctuation">></span></span>
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>bean</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>sqlSessionFactory<span class="token punctuation">"</span></span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>org.mybatis.spring.SqlSessionFactoryBean<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>dataSource<span class="token punctuation">"</span></span> <span class="token attr-name">ref</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>dataSource<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>mapperLocations<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>classpath:rml/mapping/*.xml<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>bean</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>bean</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>org.mybatis.spring.mapper.MapperScannerConfigurer<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>basePackage<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>rml.dao<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>sqlSessionFactoryBeanName<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>sqlSessionFactory<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>bean</span><span class="token punctuation">></span></span>
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>bean</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>transactionManager<span class="token punctuation">"</span></span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>org.springframework.jdbc.datasource.DataSourceTransactionManager<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>dataSource<span class="token punctuation">"</span></span> <span class="token attr-name">ref</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>dataSource<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>bean</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>advice</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>transactionAdvice<span class="token punctuation">"</span></span> <span class="token attr-name">transaction-manager</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>transactionManager<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>attributes</span><span class="token punctuation">></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>add*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>append*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>insert*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>save*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>update*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>modify*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>edit*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>delete*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>remove*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>repair<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>delAndRepair<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>REQUIRED<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>get*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>SUPPORTS<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>find*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>SUPPORTS<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>load*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>SUPPORTS<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>search*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>SUPPORTS<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>datagrid*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>SUPPORTS<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">tx:</span>method</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>*<span class="token punctuation">"</span></span> <span class="token attr-name">propagation</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>SUPPORTS<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span><span class="token namespace">tx:</span>attributes</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span><span class="token namespace">tx:</span>advice</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">aop:</span>config</span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">aop:</span>pointcut</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>transactionPointcut<span class="token punctuation">"</span></span> <span class="token attr-name">expression</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>execution(* rml.service..*Impl.*(..))<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span><span class="token namespace">aop:</span>advisor</span> <span class="token attr-name">pointcut-ref</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>transactionPointcut<span class="token punctuation">"</span></span> <span class="token attr-name">advice-ref</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>transactionAdvice<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span><span class="token namespace">aop:</span>config</span><span class="token punctuation">></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>beans</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>在如上的配置中，我们有几个对象需要关注：</p>
+<blockquote>
+<p>DataSource<br><br>sqlSessionFactory<br><br>transactionManager<br><br>transactionAdvice<br><br>AOP <br></p>
+</blockquote>
+<h1 id="DataSource对象"><a href="#DataSource对象" class="headerlink" title="DataSource对象"></a>DataSource对象</h1><p>在java中 javax.sql包下存在如下的对象。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">DataSource</span>  <span class="token keyword">extends</span> <span class="token class-name">CommonDataSource</span><span class="token punctuation">,</span> <span class="token class-name">Wrapper</span> <span class="token punctuation">&#123;</span>
+  <span class="token class-name">Connection</span> <span class="token function">getConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">SQLException</span><span class="token punctuation">;</span>
+  <span class="token class-name">Connection</span> <span class="token function">getConnection</span><span class="token punctuation">(</span><span class="token class-name">String</span> username<span class="token punctuation">,</span> <span class="token class-name">String</span> password<span class="token punctuation">)</span>
+    <span class="token keyword">throws</span> <span class="token class-name">SQLException</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>datasource的具体实现由<br><code>com.alibaba.druid.pool.DruidDataSource</code>，后面再进行分析。</p>
+<h1 id="sqlSessionFactory"><a href="#sqlSessionFactory" class="headerlink" title="sqlSessionFactory"></a>sqlSessionFactory</h1><p>后面的Mybatis专栏继续分析</p>
+<h1 id="transactionManager的分析"><a href="#transactionManager的分析" class="headerlink" title="transactionManager的分析"></a>transactionManager的分析</h1><p>在org.springframework.jdbc.datasource.DataSourceTransactionManager<br>包下面有一个DataSourceTransactionManager对象，它来注入datasource对象。其继承关系如下：<br><img src="/zhukovaskychina-github.io/././images/transactionManager.png" alt="img.png"></p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">PlatformTransactionManager</span> <span class="token keyword">extends</span> <span class="token class-name">TransactionManager</span> <span class="token punctuation">&#123;</span>
+	<span class="token class-name">TransactionStatus</span> <span class="token function">getTransaction</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nullable</span> <span class="token class-name">TransactionDefinition</span> definition<span class="token punctuation">)</span>
+			<span class="token keyword">throws</span> <span class="token class-name">TransactionException</span><span class="token punctuation">;</span>
+	<span class="token keyword">void</span> <span class="token function">commit</span><span class="token punctuation">(</span><span class="token class-name">TransactionStatus</span> status<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">TransactionException</span><span class="token punctuation">;</span>
+	<span class="token keyword">void</span> <span class="token function">rollback</span><span class="token punctuation">(</span><span class="token class-name">TransactionStatus</span> status<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">TransactionException</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>DataSourceTransactionManager继承了PlatformTransactionManager接口，其中定义了<br>获取当前事务状态、提交、以及回滚状态，并且抛出TransactionException异常。<br><img src="/zhukovaskychina-github.io/././images/AbstractPlatformTransactionManager.png" alt="img.png"></p>
+<p>在如上的UML继承关系途中，我们重点关注下几个method的具体实现。</p>
+<h3 id="getTransaction的代码分析"><a href="#getTransaction的代码分析" class="headerlink" title="getTransaction的代码分析"></a>getTransaction的代码分析</h3><p>在DataSourceTransactionManager中，该getTransaction的代码大致如下：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Override</span>
+	<span class="token keyword">public</span> <span class="token keyword">final</span> <span class="token class-name">TransactionStatus</span> <span class="token function">getTransaction</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nullable</span> <span class="token class-name">TransactionDefinition</span> definition<span class="token punctuation">)</span>
+			<span class="token keyword">throws</span> <span class="token class-name">TransactionException</span> <span class="token punctuation">&#123;</span>
+
+    
+        
+		<span class="token comment">// Use defaults if no transaction definition given.</span>
+		<span class="token class-name">TransactionDefinition</span> def <span class="token operator">=</span> <span class="token punctuation">(</span>definition <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token operator">?</span> definition <span class="token operator">:</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span><span class="token function">withDefaults</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token class-name">Object</span> transaction <span class="token operator">=</span> <span class="token function">doGetTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">boolean</span> debugEnabled <span class="token operator">=</span> logger<span class="token punctuation">.</span><span class="token function">isDebugEnabled</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">isExistingTransaction</span><span class="token punctuation">(</span>transaction<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			<span class="token comment">// Existing transaction found -> check propagation behavior to find out how to behave.</span>
+			<span class="token keyword">return</span> <span class="token function">handleExistingTransaction</span><span class="token punctuation">(</span>def<span class="token punctuation">,</span> transaction<span class="token punctuation">,</span> debugEnabled<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+
+		<span class="token comment">// Check definition settings for new transaction.</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>def<span class="token punctuation">.</span><span class="token function">getTimeout</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span>TIMEOUT_DEFAULT<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">InvalidTimeoutException</span><span class="token punctuation">(</span><span class="token string">"Invalid transaction timeout"</span><span class="token punctuation">,</span> def<span class="token punctuation">.</span><span class="token function">getTimeout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+
+		<span class="token comment">// No existing transaction found -> check propagation behavior to find out how to proceed.</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>def<span class="token punctuation">.</span><span class="token function">getPropagationBehavior</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span>PROPAGATION_MANDATORY<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			<span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">IllegalTransactionStateException</span><span class="token punctuation">(</span>
+					<span class="token string">"No existing transaction found for transaction marked with propagation 'mandatory'"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>def<span class="token punctuation">.</span><span class="token function">getPropagationBehavior</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span>PROPAGATION_REQUIRED <span class="token operator">||</span>
+				def<span class="token punctuation">.</span><span class="token function">getPropagationBehavior</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span>PROPAGATION_REQUIRES_NEW <span class="token operator">||</span>
+				def<span class="token punctuation">.</span><span class="token function">getPropagationBehavior</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span>PROPAGATION_NESTED<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			<span class="token class-name">SuspendedResourcesHolder</span> suspendedResources <span class="token operator">=</span> <span class="token function">suspend</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">if</span> <span class="token punctuation">(</span>debugEnabled<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+				logger<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"Creating new transaction with name ["</span> <span class="token operator">+</span> def<span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"]: "</span> <span class="token operator">+</span> def<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token punctuation">&#125;</span>
+			<span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+				<span class="token keyword">return</span> <span class="token function">startTransaction</span><span class="token punctuation">(</span>def<span class="token punctuation">,</span> transaction<span class="token punctuation">,</span> debugEnabled<span class="token punctuation">,</span> suspendedResources<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token punctuation">&#125;</span>
+			<span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">RuntimeException</span> <span class="token operator">|</span> <span class="token class-name">Error</span> ex<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+				<span class="token function">resume</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">,</span> suspendedResources<span class="token punctuation">)</span><span class="token punctuation">;</span>
+				<span class="token keyword">throw</span> ex<span class="token punctuation">;</span>
+			<span class="token punctuation">&#125;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+			<span class="token comment">// Create "empty" transaction: no actual transaction, but potentially synchronization.</span>
+			<span class="token keyword">if</span> <span class="token punctuation">(</span>def<span class="token punctuation">.</span><span class="token function">getIsolationLevel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token class-name">TransactionDefinition</span><span class="token punctuation">.</span>ISOLATION_DEFAULT <span class="token operator">&amp;&amp;</span> logger<span class="token punctuation">.</span><span class="token function">isWarnEnabled</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+				logger<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">"Custom isolation level specified but no actual transaction initiated; "</span> <span class="token operator">+</span>
+						<span class="token string">"isolation level will effectively be ignored: "</span> <span class="token operator">+</span> def<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token punctuation">&#125;</span>
+			<span class="token keyword">boolean</span> newSynchronization <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token function">getTransactionSynchronization</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> SYNCHRONIZATION_ALWAYS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">return</span> <span class="token function">prepareTransactionStatus</span><span class="token punctuation">(</span>def<span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">,</span> newSynchronization<span class="token punctuation">,</span> debugEnabled<span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>其中先关注下TransactionDefinition。<br>如下所示意<br>定义了PROPAGATION的事务传播行为，一共七个。<br>定义了事务隔离级别。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">TransactionDefinition</span> <span class="token punctuation">&#123;</span>
+    
+	<span class="token keyword">int</span> PROPAGATION_REQUIRED <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">int</span> PROPAGATION_SUPPORTS <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">int</span> PROPAGATION_MANDATORY <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+    
+	<span class="token keyword">int</span> PROPAGATION_REQUIRES_NEW <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">int</span> PROPAGATION_NOT_SUPPORTED <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">int</span> PROPAGATION_NEVER <span class="token operator">=</span> <span class="token number">5</span><span class="token punctuation">;</span>
+    
+	<span class="token keyword">int</span> PROPAGATION_NESTED <span class="token operator">=</span> <span class="token number">6</span><span class="token punctuation">;</span>
+    
+	<span class="token keyword">int</span> ISOLATION_DEFAULT <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    
+	<span class="token keyword">int</span> ISOLATION_READ_UNCOMMITTED <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>  <span class="token comment">// same as java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;</span>
+    
+	<span class="token keyword">int</span> ISOLATION_READ_COMMITTED <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>  <span class="token comment">// same as java.sql.Connection.TRANSACTION_READ_COMMITTED;</span>
+    
+	<span class="token keyword">int</span> ISOLATION_REPEATABLE_READ <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>  <span class="token comment">// same as java.sql.Connection.TRANSACTION_REPEATABLE_READ;</span>
+
+	<span class="token keyword">int</span> ISOLATION_SERIALIZABLE <span class="token operator">=</span> <span class="token number">8</span><span class="token punctuation">;</span>  <span class="token comment">// same as java.sql.Connection.TRANSACTION_SERIALIZABLE;</span>
+
+	<span class="token keyword">int</span> TIMEOUT_DEFAULT <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    
+	<span class="token keyword">default</span> <span class="token keyword">int</span> <span class="token function">getPropagationBehavior</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> PROPAGATION_REQUIRED<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">default</span> <span class="token keyword">int</span> <span class="token function">getIsolationLevel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> ISOLATION_DEFAULT<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">default</span> <span class="token keyword">int</span> <span class="token function">getTimeout</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> TIMEOUT_DEFAULT<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">default</span> <span class="token keyword">boolean</span> <span class="token function">isReadOnly</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token annotation punctuation">@Nullable</span>
+	<span class="token keyword">default</span> <span class="token class-name">String</span> <span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">static</span> <span class="token class-name">TransactionDefinition</span> <span class="token function">withDefaults</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token class-name">StaticTransactionDefinition</span><span class="token punctuation">.</span>INSTANCE<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h4 id="事务传播的行为"><a href="#事务传播的行为" class="headerlink" title="事务传播的行为"></a>事务传播的行为</h4><table>
+<thead>
+<tr>
+<th align="left">事务传播行为</th>
+<th align="center">含义</th>
+<th align="center">备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">PROPAGATION_REQUIRED</td>
+<td align="center">Support a current transaction; create a new one if none exists.</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">PROPAGATION_SUPPORTS</td>
+<td align="center">Support a current transaction; execute non-transactionally if none exists.</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">PROPAGATION_MANDATORY</td>
+<td align="center">Support a current transaction; throw an exception if no current transaction exists.</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">PROPAGATION_REQUIRES_NEW</td>
+<td align="center">Create a new transaction, suspending the current transaction if one exists.</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">PROPAGATION_NOT_SUPPORTED</td>
+<td align="center">Do not support a current transaction; rather always execute non-transactionally.</td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">PROPAGATION_NEVER</td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">PROPAGATION_NESTED</td>
+<td align="center">嵌套事务</td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<p>在如上的表格中，定义了七种事务传播行为，required、supports、mandatory、requiresNew、notSupported、never、nested。</p>
+<p>这是因为，Spring事务编程中，需要界定事务的范围以及事务的行为特征，因此需要这么个概念。</p>
+<h5 id="PROPAGATION-REQUIRED"><a href="#PROPAGATION-REQUIRED" class="headerlink" title="PROPAGATION_REQUIRED"></a>PROPAGATION_REQUIRED</h5><p>支持当前事务，如果没有则创建一个。</p>
+<h5 id="PROPAGATION-SUPPORTS"><a href="#PROPAGATION-SUPPORTS" class="headerlink" title="PROPAGATION_SUPPORTS"></a>PROPAGATION_SUPPORTS</h5><p>支持当前事务，如果没有非事务化运行。</p>
+<h5 id="PROPAGATION-MANDATORY"><a href="#PROPAGATION-MANDATORY" class="headerlink" title="PROPAGATION_MANDATORY"></a>PROPAGATION_MANDATORY</h5><p>支持当前事务，如果没有，则抛出异常。</p>
+<h5 id="PROPAGATION-REQUIRES-NEW"><a href="#PROPAGATION-REQUIRES-NEW" class="headerlink" title="PROPAGATION_REQUIRES_NEW"></a>PROPAGATION_REQUIRES_NEW</h5><p>如果有，则暂停当前事务，然后创建一个。</p>
+<h5 id="PROPAGATION-NOT-SUPPORTED"><a href="#PROPAGATION-NOT-SUPPORTED" class="headerlink" title="PROPAGATION_NOT_SUPPORTED"></a>PROPAGATION_NOT_SUPPORTED</h5><p>不支持事务</p>
+<h5 id="PROPAGATION-NESTED"><a href="#PROPAGATION-NESTED" class="headerlink" title="PROPAGATION_NESTED"></a>PROPAGATION_NESTED</h5><p>嵌套事务</p>
+<h5 id="TransactionDefinition的实现类"><a href="#TransactionDefinition的实现类" class="headerlink" title="TransactionDefinition的实现类"></a>TransactionDefinition的实现类</h5><p>如下所示，transactionDefinition的实现类关系。<br><img src="/zhukovaskychina-github.io/././images/transactionDefinition.png" alt="transactionDefinition的实现类继承关系图"></p>
+<p>transactionDefinition定义了getTimeout、getName、getIsolationLevel、isReadOnly、getPropagationBehavior、withDefaults等几个API</p>
+<p>它的实现类是DefaultTransactionDefinition。</p>
+<p>在DefaultTransactionDefinition的继承子类还有DefaultTransactionAttribute和TransactionTemplate。</p>
+<p>TransactionTemplate的使用场景。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">DefaultTransactionAttribute</span> <span class="token keyword">extends</span> <span class="token class-name">DefaultTransactionDefinition</span> <span class="token keyword">implements</span> <span class="token class-name">TransactionAttribute</span> <span class="token punctuation">&#123;</span>
+
+	<span class="token annotation punctuation">@Nullable</span>
+	<span class="token keyword">private</span> <span class="token class-name">String</span> qualifier<span class="token punctuation">;</span>
+
+	<span class="token annotation punctuation">@Nullable</span>
+	<span class="token keyword">private</span> <span class="token class-name">String</span> descriptor<span class="token punctuation">;</span>
+
+
+	<span class="token keyword">public</span> <span class="token class-name">DefaultTransactionAttribute</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">super</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">public</span> <span class="token class-name">DefaultTransactionAttribute</span><span class="token punctuation">(</span><span class="token class-name">TransactionAttribute</span> other<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">super</span><span class="token punctuation">(</span>other<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+    
+	<span class="token keyword">public</span> <span class="token class-name">DefaultTransactionAttribute</span><span class="token punctuation">(</span><span class="token keyword">int</span> propagationBehavior<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">super</span><span class="token punctuation">(</span>propagationBehavior<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+    
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setQualifier</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nullable</span> <span class="token class-name">String</span> qualifier<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">this</span><span class="token punctuation">.</span>qualifier <span class="token operator">=</span> qualifier<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token annotation punctuation">@Override</span>
+	<span class="token annotation punctuation">@Nullable</span>
+	<span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">getQualifier</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>qualifier<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setDescriptor</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Nullable</span> <span class="token class-name">String</span> descriptor<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">this</span><span class="token punctuation">.</span>descriptor <span class="token operator">=</span> descriptor<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+    
+	<span class="token annotation punctuation">@Nullable</span>
+	<span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">getDescriptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>descriptor<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token comment">/**
+	 * The default behavior is as with EJB: rollback on unchecked exception
+	 * (&#123;@link RuntimeException&#125;), assuming an unexpected outcome outside of any
+	 * business rules. Additionally, we also attempt to rollback on &#123;@link Error&#125; which
+	 * is clearly an unexpected outcome as well. By contrast, a checked exception is
+	 * considered a business exception and therefore a regular expected outcome of the
+	 * transactional business method, i.e. a kind of alternative return value which
+	 * still allows for regular completion of resource operations.
+	 * &lt;p>This is largely consistent with TransactionTemplate's default behavior,
+	 * except that TransactionTemplate also rolls back on undeclared checked exceptions
+	 * (a corner case). For declarative transactions, we expect checked exceptions to be
+	 * intentionally declared as business exceptions, leading to a commit by default.
+	 * @see org.springframework.transaction.support.TransactionTemplate#execute
+	 */</span>
+	<span class="token annotation punctuation">@Override</span>
+	<span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">rollbackOn</span><span class="token punctuation">(</span><span class="token class-name">Throwable</span> ex<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">RuntimeException</span> <span class="token operator">||</span> ex <span class="token keyword">instanceof</span> <span class="token class-name">Error</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+
+	<span class="token comment">/**
+	 * Return an identifying description for this transaction attribute.
+	 * &lt;p>Available to subclasses, for inclusion in their &#123;@code toString()&#125; result.
+	 */</span>
+	<span class="token keyword">protected</span> <span class="token keyword">final</span> <span class="token class-name">StringBuilder</span> <span class="token function">getAttributeDescription</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token class-name">StringBuilder</span> result <span class="token operator">=</span> <span class="token function">getDefinitionDescription</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token class-name">StringUtils</span><span class="token punctuation">.</span><span class="token function">hasText</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>qualifier<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			result<span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span><span class="token string">"; '"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>qualifier<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">append</span><span class="token punctuation">(</span><span class="token string">"'"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">return</span> result<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="ProxyTransactionManagementConfiguration-的代码分析"><a href="#ProxyTransactionManagementConfiguration-的代码分析" class="headerlink" title="ProxyTransactionManagementConfiguration 的代码分析"></a>ProxyTransactionManagementConfiguration 的代码分析</h3><p>那么我比较好奇，事务是什么时候开启的？<br>如下配置：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Configuration</span><span class="token punctuation">(</span>proxyBeanMethods <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Role</span><span class="token punctuation">(</span><span class="token class-name">BeanDefinition</span><span class="token punctuation">.</span>ROLE_INFRASTRUCTURE<span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ProxyTransactionManagementConfiguration</span> <span class="token keyword">extends</span> <span class="token class-name">AbstractTransactionManagementConfiguration</span> <span class="token punctuation">&#123;</span>
+
+    
+    
+    <span class="token comment">//</span>
+	<span class="token annotation punctuation">@Bean</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token class-name">TransactionManagementConfigUtils</span><span class="token punctuation">.</span>TRANSACTION_ADVISOR_BEAN_NAME<span class="token punctuation">)</span>
+	<span class="token annotation punctuation">@Role</span><span class="token punctuation">(</span><span class="token class-name">BeanDefinition</span><span class="token punctuation">.</span>ROLE_INFRASTRUCTURE<span class="token punctuation">)</span>
+	<span class="token keyword">public</span> <span class="token class-name">BeanFactoryTransactionAttributeSourceAdvisor</span> <span class="token function">transactionAdvisor</span><span class="token punctuation">(</span>
+			<span class="token class-name">TransactionAttributeSource</span> transactionAttributeSource<span class="token punctuation">,</span> <span class="token class-name">TransactionInterceptor</span> transactionInterceptor<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+		<span class="token class-name">BeanFactoryTransactionAttributeSourceAdvisor</span> advisor <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BeanFactoryTransactionAttributeSourceAdvisor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		advisor<span class="token punctuation">.</span><span class="token function">setTransactionAttributeSource</span><span class="token punctuation">(</span>transactionAttributeSource<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		advisor<span class="token punctuation">.</span><span class="token function">setAdvice</span><span class="token punctuation">(</span>transactionInterceptor<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>enableTx <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			advisor<span class="token punctuation">.</span><span class="token function">setOrder</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>enableTx<span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">></span></span><span class="token function">getNumber</span><span class="token punctuation">(</span><span class="token string">"order"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">return</span> advisor<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token annotation punctuation">@Bean</span>
+	<span class="token annotation punctuation">@Role</span><span class="token punctuation">(</span><span class="token class-name">BeanDefinition</span><span class="token punctuation">.</span>ROLE_INFRASTRUCTURE<span class="token punctuation">)</span>
+	<span class="token keyword">public</span> <span class="token class-name">TransactionAttributeSource</span> <span class="token function">transactionAttributeSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">AnnotationTransactionAttributeSource</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token annotation punctuation">@Bean</span>
+	<span class="token annotation punctuation">@Role</span><span class="token punctuation">(</span><span class="token class-name">BeanDefinition</span><span class="token punctuation">.</span>ROLE_INFRASTRUCTURE<span class="token punctuation">)</span>
+	<span class="token keyword">public</span> <span class="token class-name">TransactionInterceptor</span> <span class="token function">transactionInterceptor</span><span class="token punctuation">(</span><span class="token class-name">TransactionAttributeSource</span> transactionAttributeSource<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token class-name">TransactionInterceptor</span> interceptor <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TransactionInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		interceptor<span class="token punctuation">.</span><span class="token function">setTransactionAttributeSource</span><span class="token punctuation">(</span>transactionAttributeSource<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>txManager <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+			interceptor<span class="token punctuation">.</span><span class="token function">setTransactionManager</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>txManager<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">return</span> interceptor<span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>transactionInterceptor事务拦截器的定义，是通过事务属性源来实现注入的（transactionAttributeSource），<br>在该实现中具体实现了BeanFactoryTransactionAttributeSourceAdvisor<br>在其中注入了事务属性源、事务拦截器，实现面向切面编程。</p>
+<p>我们先看下事务属性源的实现<br><img src="/zhukovaskychina-github.io/././images/transactionInterceptor.png" alt="img.png"></p>
+<p>上图所定义了TransactionAttributeSource。<br>我们看下TransactionAttributeSource</p>
+<h4 id="TransactionAttributeSource的定义以及它的子类们"><a href="#TransactionAttributeSource的定义以及它的子类们" class="headerlink" title="TransactionAttributeSource的定义以及它的子类们"></a>TransactionAttributeSource的定义以及它的子类们</h4><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">TransactionAttributeSource</span> <span class="token punctuation">&#123;</span>
+
+	<span class="token comment">/**
+	 * Determine whether the given class is a candidate for transaction attributes
+	 * in the metadata format of this &#123;@code TransactionAttributeSource&#125;.
+	 * &lt;p>If this method returns &#123;@code false&#125;, the methods on the given class
+	 * will not get traversed for &#123;@link #getTransactionAttribute&#125; introspection.
+	 * Returning &#123;@code false&#125; is therefore an optimization for non-affected
+	 * classes, whereas &#123;@code true&#125; simply means that the class needs to get
+	 * fully introspected for each method on the given class individually.
+	 * @param targetClass the class to introspect
+	 * @return &#123;@code false&#125; if the class is known to have no transaction
+	 * attributes at class or method level; &#123;@code true&#125; otherwise. The default
+	 * implementation returns &#123;@code true&#125;, leading to regular introspection.
+	 * @since 5.2
+	 */</span>
+	<span class="token keyword">default</span> <span class="token keyword">boolean</span> <span class="token function">isCandidateClass</span><span class="token punctuation">(</span><span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">></span></span> targetClass<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+	<span class="token punctuation">&#125;</span>
+
+	<span class="token comment">/**
+	 * Return the transaction attribute for the given method,
+	 * or &#123;@code null&#125; if the method is non-transactional.
+	 * @param method the method to introspect
+	 * @param targetClass the target class (may be &#123;@code null&#125;,
+	 * in which case the declaring class of the method must be used)
+	 * @return the matching transaction attribute, or &#123;@code null&#125; if none found
+	 */</span>
+	<span class="token annotation punctuation">@Nullable</span>
+	<span class="token class-name">TransactionAttribute</span> <span class="token function">getTransactionAttribute</span><span class="token punctuation">(</span><span class="token class-name">Method</span> method<span class="token punctuation">,</span> <span class="token annotation punctuation">@Nullable</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">></span></span> targetClass<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>transactionAttributeSource定义了两个方法，第一个是CandidateClass，用来判断制定的class的源信息。<br>第二个是用来获取指定类的方法的事务属性。</p>
+<p>我们看下它的子类实现。</p>
+<p>AnnotationTransactionAttributeSource，在上一篇中做了定义，这里不再重复阐述。</p>
+<h4 id="transactionInterceptor"><a href="#transactionInterceptor" class="headerlink" title="transactionInterceptor"></a>transactionInterceptor</h4>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/zhukovaskychina-github.io/tags/spring/" rel="tag"># spring</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/zhukovaskychina-github.io/2022/07/31/leetcode/leetcode1/" rel="prev" title="两数求和">
+      <i class="fa fa-chevron-left"></i> 两数求和
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#DataSource%E5%AF%B9%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">DataSource对象</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#sqlSessionFactory"><span class="nav-number">2.</span> <span class="nav-text">sqlSessionFactory</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#transactionManager%E7%9A%84%E5%88%86%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">transactionManager的分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#getTransaction%E7%9A%84%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">3.0.1.</span> <span class="nav-text">getTransaction的代码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E4%BC%A0%E6%92%AD%E7%9A%84%E8%A1%8C%E4%B8%BA"><span class="nav-number">3.0.1.1.</span> <span class="nav-text">事务传播的行为</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#PROPAGATION-REQUIRED"><span class="nav-number">3.0.1.1.1.</span> <span class="nav-text">PROPAGATION_REQUIRED</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PROPAGATION-SUPPORTS"><span class="nav-number">3.0.1.1.2.</span> <span class="nav-text">PROPAGATION_SUPPORTS</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PROPAGATION-MANDATORY"><span class="nav-number">3.0.1.1.3.</span> <span class="nav-text">PROPAGATION_MANDATORY</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PROPAGATION-REQUIRES-NEW"><span class="nav-number">3.0.1.1.4.</span> <span class="nav-text">PROPAGATION_REQUIRES_NEW</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PROPAGATION-NOT-SUPPORTED"><span class="nav-number">3.0.1.1.5.</span> <span class="nav-text">PROPAGATION_NOT_SUPPORTED</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PROPAGATION-NESTED"><span class="nav-number">3.0.1.1.6.</span> <span class="nav-text">PROPAGATION_NESTED</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#TransactionDefinition%E7%9A%84%E5%AE%9E%E7%8E%B0%E7%B1%BB"><span class="nav-number">3.0.1.1.7.</span> <span class="nav-text">TransactionDefinition的实现类</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ProxyTransactionManagementConfiguration-%E7%9A%84%E4%BB%A3%E7%A0%81%E5%88%86%E6%9E%90"><span class="nav-number">3.0.2.</span> <span class="nav-text">ProxyTransactionManagementConfiguration 的代码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#TransactionAttributeSource%E7%9A%84%E5%AE%9A%E4%B9%89%E4%BB%A5%E5%8F%8A%E5%AE%83%E7%9A%84%E5%AD%90%E7%B1%BB%E4%BB%AC"><span class="nav-number">3.0.2.1.</span> <span class="nav-text">TransactionAttributeSource的定义以及它的子类们</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#transactionInterceptor"><span class="nav-number">3.0.2.2.</span> <span class="nav-text">transactionInterceptor</span></a></li></ol></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">zhukovasky</p>
+  <div class="site-description" itemprop="description">技术宅的世界</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/zhukovaskychina-github.io/archives/">
+        
+          <span class="site-state-item-count">17</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/zhukovaskychina" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;zhukovaskychina" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhukovasky</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script data-pjax async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/zhukovaskychina-github.io/lib/anime.min.js"></script>
+  <script src="/zhukovaskychina-github.io/lib/pjax/pjax.min.js"></script>
+  <script src="/zhukovaskychina-github.io/lib/velocity/velocity.min.js"></script>
+  <script src="/zhukovaskychina-github.io/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/zhukovaskychina-github.io/js/utils.js"></script>
+
+<script src="/zhukovaskychina-github.io/js/motion.js"></script>
+
+
+<script src="/zhukovaskychina-github.io/js/schemes/pisces.js"></script>
+
+
+<script src="/zhukovaskychina-github.io/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="pjax">
+  
+
+  
+  <script src="//cdn.jsdelivr.net/npm/quicklink@1/dist/quicklink.umd.js"></script>
+  <script>
+      window.addEventListener('load', () => {
+      quicklink({
+        timeout : 3000,
+        priority: true,
+        ignores : [uri => uri.includes('#'),uri => uri === 'https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/02/spring/transaction-second/',]
+      });
+      });
+  </script>
+
+    </div>
+</body>
+</html>
