@@ -11,6 +11,8 @@
   <link rel="mask-icon" href="/zhukovaskychina-github.io/images/logo.svg" color="#222">
 
 <link rel="stylesheet" href="/zhukovaskychina-github.io/css/main.css">
+
+
 <link rel="stylesheet" href="/zhukovaskychina-github.io/lib/font-awesome/css/all.min.css">
 
 <script id="hexo-configurations">
@@ -18,18 +20,24 @@
     var CONFIG = {"hostname":"zhukovaskychina.github.io","root":"/zhukovaskychina-github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="技术宅的世界">
+  <meta name="description" content="出去面试的时候，总是有面试官喜欢问高并发，今天就在这里做一个详细的整理。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="java 并发编程知识总结">
 <meta property="og:url" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/07/juc/juc/index.html">
 <meta property="og:site_name" content="zhukovasky的博客">
-<meta property="og:description" content="技术宅的世界">
+<meta property="og:description" content="出去面试的时候，总是有面试官喜欢问高并发，今天就在这里做一个详细的整理。">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/jucthreads.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/threadstates.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/jucmarkword.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/jucX.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/juclightlocks.JPG">
 <meta property="article:published_time" content="2022-08-07T07:12:55.000Z">
-<meta property="article:modified_time" content="2022-08-07T07:17:14.501Z">
+<meta property="article:modified_time" content="2022-08-07T10:10:49.573Z">
 <meta property="article:author" content="zhukovasky">
 <meta property="article:tag" content="java">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/jucthreads.JPG">
 
 <link rel="canonical" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/07/juc/juc/">
 
@@ -176,7 +184,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2022-08-07 15:12:55 / 修改时间：15:17:14" itemprop="dateCreated datePublished" datetime="2022-08-07T15:12:55+08:00">2022-08-07</time>
+              <time title="创建时间：2022-08-07 15:12:55 / 修改时间：18:10:49" itemprop="dateCreated datePublished" datetime="2022-08-07T15:12:55+08:00">2022-08-07</time>
             </span>
 
           
@@ -187,6 +195,7 @@
               <span class="post-meta-item-text">阅读次数：</span>
               <span id="busuanzi_value_page_pv"></span>
             </span>
+            <div class="post-description">出去面试的时候，总是有面试官喜欢问高并发，今天就在这里做一个详细的整理。</div>
 
         </div>
       </header>
@@ -197,7 +206,139 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        
+        <h1 id="多线程的基本原理"><a href="#多线程的基本原理" class="headerlink" title="多线程的基本原理"></a>多线程的基本原理</h1><ul>
+<li><p>多线程</p>
+<ul>
+<li><p>线程从创建到最终执行的整体流程</p>
+<ul>
+<li>原理图<br><img src="/zhukovaskychina-github.io/././images/juc/jucthreads.JPG" alt="img.png"></li>
+<li>线程启动后，并不会立即执行，而是要等到操作系统层面的CPU调度算法，把当前线程分配给某个CPU来执行。</li>
+<li>线程的运行状态，在java中一共有6种状态：<ul>
+<li>NEW，新建状态，也就是通过new Thread()时的状态。</li>
+<li>RUNNABLE，运行状态，通过start方法启动线程后的状态。</li>
+<li>BLOCKED，阻塞状态，当线程执行synchronized代码，并且未抢占到同步锁，会变成该状态。</li>
+<li>WAITING，调用Object.wait()等方法，会让线程变成该状态。</li>
+<li>TIMED_WAITING，超时等待状态，如sleep，超时候会自动唤醒。</li>
+<li>TERMINATED，终止状态，线程的run方法中的指令执行完成后的状态。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>多线程的状态切换<br><img src="/zhukovaskychina-github.io/././images/juc/threadstates.JPG" alt="img.png"><br>如上图所示意，当一个线程创建后，通过Thread.start方法后，会进入到READY状态，等待CPU调度，该线程会切换到RUNNING状态。</p>
+<ul>
+<li>当线程调用Object.wait()或者Thread.join以及LockSupport.park方法，该线程会进入到WAITING状态。</li>
+<li>当线程调用Object.notify&#x2F;notifyAll(),以及LockSupport.unpark等方法，就会进入到RUNNABLE状态。</li>
+<li>当线程调用Thread.sleep,Object.wait,Thread.join以及LockSupport.parkNanos,LockSupport.parkUntil,Thread.sleep等方法会金瑞到TIMED_WAITING状态。</li>
+<li>当线程调用Object.notify&#x2F;notifyAll(),以及LockSupport.unpark等方法，就会进入到RUNNABLE状态。</li>
+<li>当线程抢占到synchronized锁未成功时，会进入到blocked状态。当前抢占成功的时候，会进入到runnable状态。</li>
+</ul>
+</li>
+<li><p>java线程状态只有RUNNABLE状态，没有显示的READY和RUNNING区分，只有jvm系统级别实现了这种区分。</p>
+</li>
+<li><p>Thread.yield和Thread.sleep的区别，如上图所示意，Thread.yield由CPU调度算法调度，只不过是由Ready状态进入到了RUNNING状态。而Sleep则是由RUNNABLE进入到TIMED_WAITING状态。</p>
+</li>
+</ul>
+</li>
+<li><p>上下文切换带来的性能开销<br>导致线程上下文切换的原因总结如下：</p>
+<ul>
+<li>多个任务抢占synchronized同步锁资源。</li>
+<li>在线程运行中存在这IO资源，CPU调度器会切换CPU时间片。</li>
+<li>在线程中通过主动阻塞当前线程的方法释放CPU时间片。</li>
+<li>当前线程执行完成后释放CPU时间片，CPU重新调度。</li>
+</ul>
+</li>
+<li><p>理解上下文切换</p>
+<ul>
+<li>进程上下文切换<ul>
+<li>CPU时间片分配。</li>
+<li>当前进程系统资源（如内存）不足时，进程会被刮起。</li>
+<li>当存在优先级更高的进程运行时，当前进程有可能会被刮起，CPU时间片分配给优先级更高的进程运行。<br>与线程上下文切换相比，进程上下文切换性能开销巨大。每次开销只有几十纳秒，但是频繁开销，CPU真正时间很少。进程每次切换都需要在操作系统层面保存用户空间的虚拟内存、栈、全局变量等状态，还要保存内核空间的内核堆栈、寄存器等状态。</li>
+</ul>
+</li>
+<li>线程上下文切换<ul>
+<li>当两个线程属于不同进程的同时，由于进程资源不足，所以线程的切换就是进程的切换。</li>
+<li>当两个线程属于同一个进程的时候，只需要保存线程的上下文。<br>线程的上下文切换，需要保存上一个线程的私有数据、寄存器等数据，这个过程同样占用CPU资源，当上下文切换过于频繁时，会使得CPU不断进行切换，无法真正计算，最终导致性能下降。</li>
+</ul>
+</li>
+<li>中断上下文切换<ul>
+<li>CPU本身故障、程序故障。</li>
+<li>IO中断。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>如何减少切换上下文切换</p>
+<ul>
+<li>减少线程数</li>
+<li>采用无锁设计</li>
+<li>采用CAS做自选操作</li>
+</ul>
+</li>
+</ul>
+<h1 id="深度理解synchronized实现原理"><a href="#深度理解synchronized实现原理" class="headerlink" title="深度理解synchronized实现原理"></a>深度理解synchronized实现原理</h1><ul>
+<li>导致线程不安全的原因主要有<ul>
+<li>原子性<ul>
+<li>产生原子性的原因有两个<ul>
+<li>CPU时间片切换</li>
+<li>执行指令的原子性，也就是线程运行的程序或者指令是否具备原子性。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>有序性</li>
+<li>可见性<br>如果一个线程对一个共享变量进行了修改，而其他线程不能及时读取修改之后的值，那么我们可以认为多线程环境下存在变量可见性问题。</li>
+</ul>
+</li>
+</ul>
+<h2 id="Java中的synchronized同步锁"><a href="#Java中的synchronized同步锁" class="headerlink" title="Java中的synchronized同步锁"></a>Java中的synchronized同步锁</h2><ul>
+<li>synchronized同步锁的范围<ul>
+<li>类锁<br>类锁是全局锁，范围比较大，可以修饰静态方法，也可以修饰代码块。</li>
+<li>对象锁<br>对象锁是实例锁，可修饰普通方法，也可以修饰代码块。</li>
+</ul>
+<ul>
+<li>同步锁的核心特征是排他。</li>
+</ul>
+</li>
+<li>实现互斥锁满足两个条件<ul>
+<li>必须竞争同一个共享资源。</li>
+<li>需要有一个标记来识别当前的锁的状态是空闲还是繁忙。</li>
+</ul>
+</li>
+</ul>
+<h3 id="MarkWord"><a href="#MarkWord" class="headerlink" title="MarkWord"></a>MarkWord</h3><p>如上所示意，对象头中通过锁标记位来标记出偏向锁、锁标记位。可以看到，锁状态分为无锁、偏向锁、轻量级锁、重量级锁。<br><img src="/zhukovaskychina-github.io/././images/juc/jucmarkword.JPG" alt="img.png"></p>
+<ul>
+<li>锁的类型<ul>
+<li>偏向锁<br>在没有多线程的竞争的情况下访问synchronized修饰的代码块加锁场景。加锁是为了防范线程安全性的风险，在没有线程竞争的情况下去访问synchronized同步代码块，会尝试通过偏向锁来抢占防蚊子哥。如果抢占成功，则直接修改对象头中的锁标记。偏向锁为01，标记为01，以及线程threadId。偏向的意思是线程X获得了偏向锁，那么当线程X后续访问这个同步方法的时候，只需要判断对象头中的线程ID和线程X是否相等。如果相等，则不需要再次去抢占该锁，直接获得访问资格即可。<br><img src="/zhukovaskychina-github.io/././images/juc/jucX.JPG" alt="img.png"></li>
+<li>轻量级锁<ul>
+<li>原理如下<br><img src="/zhukovaskychina-github.io/././images/juc/juclightlocks.JPG" alt="img.png"><ul>
+<li>偏向锁和轻量级锁的对比<ul>
+<li>偏向锁，就是在一段时间之内只由同一个线程来获得和释放锁，加锁的方式是把ThreadId保存到锁对象的MarkWord中。</li>
+<li>轻量级锁，存在锁交替竞争的场景，在同一时刻不会有多个线程同时获得锁，它的实现方式在每个线程的栈帧中分配一个BasicObjectLock对象，然后把锁对象中的MarkWord<br>拷贝到LockRecord中，最后把锁对象的MarkWord指针指向LockRecord。轻量级锁之所以这样设计，是因为锁对象在竞争的过程中可能会发生变化，但是每个线程的LockRecord的MarkWord不会受到影响。因此当触发锁膨胀，能够通过LockRecord和锁对象的MarkWOrd进行比较来判定在持有的轻量级锁的过程中，锁对象是否被其他线程抢占国，如果有，则需要在轻量级锁释放锁的过程中唤醒被阻塞的请他线程。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>重量级锁<br>   如果线程在运行synchronized 同步代码块时，发现锁状态是轻量级锁并且有其他线程抢占了锁资源，那么该线程就会触发锁膨胀升级到重量级锁。在获取重量级锁之前，会实现锁膨胀，在锁膨胀的方法中创建一个ObjectMonitor对象，然后把ObjectMonitor对象的指针保存在锁对象的MarkWord中。锁膨胀分为四种情况：<ul>
+<li>当前已经是重量级锁的状态，不需要再膨胀，直接从锁对象的MarkWord中获取ObjectMonitor对象的指针返回即可。</li>
+<li>如果有其他线程正在进行锁膨胀，那么通过自旋的方式不断重试知道其他线程完成锁膨胀，其实就是创建一个ObjectMonitor对象。</li>
+<li>如果当前有其他线程获得了轻量级锁，那么当前线程会完成锁的膨胀。</li>
+<li>如果当前是无锁状态，也就是说之前所获得的锁的资源的线程正好释放了锁，那么当前线程需要完成锁膨胀。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="死锁产生的必要条件"><a href="#死锁产生的必要条件" class="headerlink" title="死锁产生的必要条件"></a>死锁产生的必要条件</h2><p>  导致死锁的条件有四个：</p>
+<ul>
+<li>互斥条件，共享资源X和Y只能被一个线程占用。</li>
+<li>请求和保持条件，线程T1已经取得共享资源X，在等待共享资源Y的时候，不释放X。</li>
+<li>不可抢占条件，其他线程不能强行抢占线程T1的占有的资源。</li>
+<li>循环等待条件，线程T1等待线程T2占有的资源，线程T2等待线程T1占有的资源，即循环等。<br>  除了互斥条件不可破坏，其他都可以破坏。</li>
+</ul>
+<h1 id="volatile关键字"><a href="#volatile关键字" class="headerlink" title="volatile关键字"></a>volatile关键字</h1><h2 id="深度理解可见性问题的本质"><a href="#深度理解可见性问题的本质" class="headerlink" title="深度理解可见性问题的本质"></a>深度理解可见性问题的本质</h2><p>   CPU缓存一致性问题</p>
+
     </div>
 
     
@@ -215,8 +356,8 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos2/" rel="prev" title="nacos config的源码分析(二)">
-      <i class="fa fa-chevron-left"></i> nacos config的源码分析(二)
+    <a href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos3/" rel="prev" title="nacos config的源码分析(三)">
+      <i class="fa fa-chevron-left"></i> nacos config的源码分析(三)
     </a></div>
       <div class="post-nav-item"></div>
     </div>
@@ -277,6 +418,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">多线程的基本原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E7%90%86%E8%A7%A3synchronized%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">深度理解synchronized实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Java%E4%B8%AD%E7%9A%84synchronized%E5%90%8C%E6%AD%A5%E9%94%81"><span class="nav-number">2.1.</span> <span class="nav-text">Java中的synchronized同步锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MarkWord"><span class="nav-number">2.1.1.</span> <span class="nav-text">MarkWord</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E4%BA%A7%E7%94%9F%E7%9A%84%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6"><span class="nav-number">2.2.</span> <span class="nav-text">死锁产生的必要条件</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#volatile%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">3.</span> <span class="nav-text">volatile关键字</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E7%90%86%E8%A7%A3%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-number">3.1.</span> <span class="nav-text">深度理解可见性问题的本质</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
