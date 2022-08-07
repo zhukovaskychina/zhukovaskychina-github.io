@@ -27,17 +27,22 @@
 <meta property="og:site_name" content="zhukovasky的博客">
 <meta property="og:description" content="netty的源码分析，出去面试的时候，不少面试官总是笑眯眯的问netty的原理如何，今天在这里做一次源码分析的总结">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/BIO.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/NIO.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettyreactormodes.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettyreactormultithreads.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettyreactormasterslave.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettyreactornioeventloop.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettyniomodels.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/linuxeventloop.png">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nioEventGroup.png">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettynioeventloopcode.png">
 <meta property="article:published_time" content="2022-08-06T08:53:21.000Z">
-<meta property="article:modified_time" content="2022-08-06T14:36:19.718Z">
+<meta property="article:modified_time" content="2022-08-07T05:47:14.887Z">
 <meta property="article:author" content="zhukovasky">
 <meta property="article:tag" content="netty">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/nettyreactormodes.JPG">
+<meta name="twitter:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/netty/BIO.JPG">
 
 <link rel="canonical" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/06/netty/netty2/">
 
@@ -127,7 +132,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">19</span></a>
+    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">21</span></a>
 
   </li>
   </ul>
@@ -182,10 +187,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
-              
 
-              <time title="创建时间：2022-08-06 16:53:21 / 修改时间：22:36:19" itemprop="dateCreated datePublished" datetime="2022-08-06T16:53:21+08:00">2022-08-06</time>
+              <time title="创建时间：2022-08-06 16:53:21" itemprop="dateCreated datePublished" datetime="2022-08-06T16:53:21+08:00">2022-08-06</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-08-07 13:47:14" itemprop="dateModified" datetime="2022-08-07T13:47:14+08:00">2022-08-07</time>
+              </span>
 
           
             <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
@@ -206,7 +217,21 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h1 id="Netty-Reactor模式"><a href="#Netty-Reactor模式" class="headerlink" title="Netty Reactor模式"></a>Netty Reactor模式</h1><ul>
+        <h1 id="BIO和NIO的区别"><a href="#BIO和NIO的区别" class="headerlink" title="BIO和NIO的区别"></a>BIO和NIO的区别</h1><ul>
+<li><p>BIO模型</p>
+<ul>
+<li>原理如下：<br><img src="/zhukovaskychina-github.io/././images/netty/BIO.JPG" alt="img.png"></li>
+</ul>
+</li>
+<li><p>NIO模型</p>
+<ul>
+<li>原理如下：<br><img src="/zhukovaskychina-github.io/././images/netty/NIO.JPG" alt="img.png"></li>
+</ul>
+</li>
+<li><p>BIO和NIO的区别<br>NIO比BIO相比复杂得多，NIO多了Selector。Selector能监听多个channel,当运行select()方法，会循环检测是否有就绪事件的Channel。只需要一条线程即可管理多个Channel，<br>而且对Channel的读写采用的都是非阻塞IO。与BIO相比，NIO同时接入的Channel会更多、资源利用率更高。</p>
+</li>
+</ul>
+<h1 id="Netty-Reactor模式"><a href="#Netty-Reactor模式" class="headerlink" title="Netty Reactor模式"></a>Netty Reactor模式</h1><ul>
 <li><p>Reactor单线程模型。</p>
 <ul>
 <li><p>Reactor单线程模型，所有的IO操作都是在一个NIO线程中完成，NIO的职责如下：</p>
@@ -265,12 +290,61 @@
 </ul>
 </li>
 </ul>
+<h1 id="Epoll模型和Select模型的区别"><a href="#Epoll模型和Select模型的区别" class="headerlink" title="Epoll模型和Select模型的区别"></a>Epoll模型和Select模型的区别</h1><p>  多路复用器常见的底层实现模型有epoll模型和select模型。</p>
+<ul>
+<li>select模型特点<ul>
+<li>select模型只有一个select函数，每次调用select函数，都需要把整个文件描述FD从用户态拷贝到内核态，当文件描述符很多，则开销很大。</li>
+<li>每次在调用select函数时，内核都需要便利所有的文件描述福，这个开销也很大。</li>
+<li>select可支持的文件描述符有上限，可监控的文件描述符最高只有4096个。</li>
+</ul>
+</li>
+<li>epoll模型<ul>
+<li>没有文件描述符限制。</li>
+<li>每次调用epoll_Wait函数只会便利状态发生改变的文件描述符，无需全部遍历，降低了操作时间的复杂度。</li>
+<li>采用了内存映射机制，内核直接将就绪队列通过MMAP方式映射到用户态，避免了内存拷贝带来的额外性能开销。</li>
+</ul>
+</li>
+</ul>
+<h1 id="Netty线程模型"><a href="#Netty线程模型" class="headerlink" title="Netty线程模型"></a>Netty线程模型</h1><p>  上一个章节以及本章节介绍了Netty所用到模式，介绍到了reactor模式，netty推荐多线程reactor模式或者主从模式。<br>这里再一次复习下netty的主从模式。<br>  <img src="/zhukovaskychina-github.io/././images/netty/nettyniomodels.JPG" alt="img.png"></p>
+<ul>
+<li>netty主从模式  <pre class="line-numbers language-java" data-language="java"><code class="language-java">
+<span class="token class-name">EventLoopGroup</span> bossGroup<span class="token operator">=</span><span class="token keyword">new</span> <span class="token class-name">NioEventLoopGroup</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">EventLoopGroup</span> workerGroup<span class="token operator">=</span><span class="token keyword">new</span> <span class="token class-name">NioEventLoopGroup</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+
+<span class="token class-name">ServerBootstrap</span> bootstrap<span class="token operator">=</span><span class="token keyword">new</span> <span class="token class-name">ServerBootstrap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+bootstrap<span class="token punctuation">.</span><span class="token function">group</span><span class="token punctuation">(</span>bossGroup<span class="token punctuation">,</span>workerGroup<span class="token punctuation">)</span><span class="token punctuation">;</span>
+bootstrap<span class="token punctuation">.</span><span class="token function">channel</span><span class="token punctuation">(</span><span class="token class-name">NioServerSocketChannel</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+bootstrap<span class="token punctuation">.</span><span class="token function">option</span><span class="token punctuation">(</span><span class="token class-name">ChannelOption</span><span class="token punctuation">.</span>SO_BACKLOG<span class="token punctuation">,</span><span class="token number">128</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">childHandler</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ChannelInitializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">SocketChannel</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">protected</span> <span class="token keyword">void</span> <span class="token function">initChannel</span><span class="token punctuation">(</span><span class="token class-name">SocketChannel</span> ch<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">&#123;</span>
+        ch<span class="token punctuation">.</span><span class="token function">pipeline</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">addLast</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ServerHandler</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">ChannelFuture</span> future <span class="token operator">=</span> bootstrap<span class="token punctuation">.</span><span class="token function">bind</span><span class="token punctuation">(</span><span class="token number">8000</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+future<span class="token punctuation">.</span><span class="token function">channel</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">closeFuture</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+workerGroup<span class="token punctuation">.</span><span class="token function">shutdownGracefully</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+bossGroup<span class="token punctuation">.</span><span class="token function">shutdownGracefully</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ul>
+<p>  在如上代码中，定义了boss线程，定义了worker线程，通过ServerBootStrap来作为启动类，将NioServerSocketChannel注册到NIO 线程池，<br>通过bootstrap定义了channel，还需要定一个handler，用来业务逻辑的处理。</p>
+<p>  worker线程默认启动2*CPU，这是因为都是IO。</p>
 <h1 id="对Netty影响比较大的TCP参数"><a href="#对Netty影响比较大的TCP参数" class="headerlink" title="对Netty影响比较大的TCP参数"></a>对Netty影响比较大的TCP参数</h1><ul>
 <li>SO_RCVBUF 和SO_SNDBUF：通常建议值为128KB&#x2F;256KB。</li>
 <li>SO_TCPNODELAY：<ul>
 <li>Nagle算法，用于将小的碎片数据连接成更大的报文来最小化所发送的报文的数量。如果需要发送较小的豹纹，则需要禁用该算法。Netty默认禁用该算法。</li>
 </ul>
 </li>
+</ul>
+<h1 id="Netty的零拷贝"><a href="#Netty的零拷贝" class="headerlink" title="Netty的零拷贝"></a>Netty的零拷贝</h1><p>  零拷贝并不是没有拷贝，而是减少用户态数据和操作系统态数据的拷贝次数。少一次拷贝，CPU效率就会上升。</p>
+<p>  Netty的零拷贝体现在如下几个方面。</p>
+<ul>
+<li>Netty接收和发送数据ByteBuffer采用的都是堆外直接内存，使用堆外直接内存进行Socket的读&#x2F;写，无需进行字节缓冲区的二次拷贝。如果传统的堆内存进行Socket读写，则jvm会将堆内存Buffer数据拷贝到堆外直接内存中，然后<br>  才写入Socket，然后才写入到Socket中。</li>
+<li>在网络传输在网络传输中，一条消息可能被分割成多个数据包进行发送，只有当收到一个完整的数据包后，才能完成解码工作。Netty中的是将这些数据组合到一块，CompositeByteBuf是Netty在零拷贝方案中组合Buffer。</li>
+<li>在传统拷贝文件的方法需要将FileInputstream文件输入流读取到一个临时的byte[]数组中，然后通过FileOutputStream文件输出流，把临时的byte[]数据内容写入到目的文件中。当拷贝大文件的时候，频繁的内存拷贝会消耗大量的CPU系统资源。Netty底层运用了JavaNIO的FileChannel.transfer方法，该方法依赖操作系统实现零拷贝。</li>
 </ul>
 <h1 id="Netty对NIO的支持，在Linux上"><a href="#Netty对NIO的支持，在Linux上" class="headerlink" title="Netty对NIO的支持，在Linux上"></a>Netty对NIO的支持，在Linux上</h1><p><img src="/zhukovaskychina-github.io/././images/netty/linuxeventloop.png" alt="img.png"></p>
 <p>如上图，清晰的展现了eventloop的实现关系。</p>
@@ -281,6 +355,63 @@ One &#123;@link EventLoop&#125; instance will usually handle more than one &#123
 implementation details and internals.<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
 翻译过来<pre class="line-numbers language-text" data-language="text"><code class="language-text">一个&#123;@link EventLoop&#125;实例通常会处理多个&#123;@link Channel&#125;，但这可能取决于
 实现细节和内部信息。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre></li>
+</ul>
+<h2 id="NettyNioEventLoop源代码解析"><a href="#NettyNioEventLoop源代码解析" class="headerlink" title="NettyNioEventLoop源代码解析"></a>NettyNioEventLoop源代码解析</h2><ul>
+<li><p>NioEventLoopGroup作用</p>
+<ul>
+<li>创建一定数量的NioEventLoop线程组并且初始化</li>
+<li>创建线程选择器chooser。当获取线程时，通过选择器来获取。</li>
+<li>创建线程工厂并构建线程执行器。</li>
+</ul>
+</li>
+<li><p>NioEventLoopGroup源代码</p>
+<ul>
+<li>源代码<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">EventLoopGroup</span> <span class="token keyword">extends</span> <span class="token class-name">EventExecutorGroup</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">/**
+     * Return the next &#123;@link EventLoop&#125; to use
+     */</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token class-name">EventLoop</span> <span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * Register a &#123;@link Channel&#125; with this &#123;@link EventLoop&#125;. The returned &#123;@link ChannelFuture&#125;
+     * will get notified once the registration was complete.
+     * 将channel对象绑定到当前的eventloop。一旦注册成功，则返回channelfuture对象
+     */</span>
+    <span class="token class-name">ChannelFuture</span> <span class="token function">register</span><span class="token punctuation">(</span><span class="token class-name">Channel</span> channel<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * Register a &#123;@link Channel&#125; with this &#123;@link EventLoop&#125; using a &#123;@link ChannelFuture&#125;. The passed
+     * &#123;@link ChannelFuture&#125; will get notified once the registration was complete and also will get returned.
+     */</span>
+    <span class="token class-name">ChannelFuture</span> <span class="token function">register</span><span class="token punctuation">(</span><span class="token class-name">ChannelPromise</span> promise<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * Register a &#123;@link Channel&#125; with this &#123;@link EventLoop&#125;. The passed &#123;@link ChannelFuture&#125;
+     * will get notified once the registration was complete and also will get returned.
+     *
+     * @deprecated Use &#123;@link #register(ChannelPromise)&#125; instead.
+     */</span>
+    <span class="token annotation punctuation">@Deprecated</span>
+    <span class="token class-name">ChannelFuture</span> <span class="token function">register</span><span class="token punctuation">(</span><span class="token class-name">Channel</span> channel<span class="token punctuation">,</span> <span class="token class-name">ChannelPromise</span> promise<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+<li>继承关系<br><img src="/zhukovaskychina-github.io/././images/netty/nioEventGroup.png" alt="img.png"></li>
+</ul>
+</li>
+</ul>
+<h2 id="NioEventLoop"><a href="#NioEventLoop" class="headerlink" title="NioEventLoop"></a>NioEventLoop</h2><ul>
+<li><p>NioEventLoop有以下5个核心功能。</p>
+<ul>
+<li>开启selector并且初始化。</li>
+<li>把ServerSocketChannel注册到Selector上。</li>
+<li>处理各种IO事件，如OP_ACCEPT、OP_CONNECT、OP_READ、OP_WRITE事件。</li>
+<li>执行定时调度任务。</li>
+<li>解决JDK bug。</li>
+</ul>
+</li>
+<li><p><img src="/zhukovaskychina-github.io/././images/netty/nettynioeventloopcode.png" alt="img.png"></p>
+</li>
 </ul>
 
     </div>
@@ -300,8 +431,8 @@ implementation details and internals.<span aria-hidden="true" class="line-number
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/zhukovaskychina-github.io/2022/08/05/netty/netty/" rel="prev" title="netty 源码分析(一)">
-      <i class="fa fa-chevron-left"></i> netty 源码分析(一)
+    <a href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos2/" rel="prev" title="nacos config的源码分析(二)">
+      <i class="fa fa-chevron-left"></i> nacos config的源码分析(二)
     </a></div>
       <div class="post-nav-item"></div>
     </div>
@@ -362,7 +493,7 @@ implementation details and internals.<span aria-hidden="true" class="line-number
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Netty-Reactor%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.</span> <span class="nav-text">Netty Reactor模式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9Netty%E5%BD%B1%E5%93%8D%E6%AF%94%E8%BE%83%E5%A4%A7%E7%9A%84TCP%E5%8F%82%E6%95%B0"><span class="nav-number">2.</span> <span class="nav-text">对Netty影响比较大的TCP参数</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Netty%E5%AF%B9NIO%E7%9A%84%E6%94%AF%E6%8C%81%EF%BC%8C%E5%9C%A8Linux%E4%B8%8A"><span class="nav-number">3.</span> <span class="nav-text">Netty对NIO的支持，在Linux上</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#BIO%E5%92%8CNIO%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">1.</span> <span class="nav-text">BIO和NIO的区别</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Netty-Reactor%E6%A8%A1%E5%BC%8F"><span class="nav-number">2.</span> <span class="nav-text">Netty Reactor模式</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Epoll%E6%A8%A1%E5%9E%8B%E5%92%8CSelect%E6%A8%A1%E5%9E%8B%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">3.</span> <span class="nav-text">Epoll模型和Select模型的区别</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Netty%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B"><span class="nav-number">4.</span> <span class="nav-text">Netty线程模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9Netty%E5%BD%B1%E5%93%8D%E6%AF%94%E8%BE%83%E5%A4%A7%E7%9A%84TCP%E5%8F%82%E6%95%B0"><span class="nav-number">5.</span> <span class="nav-text">对Netty影响比较大的TCP参数</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Netty%E7%9A%84%E9%9B%B6%E6%8B%B7%E8%B4%9D"><span class="nav-number">6.</span> <span class="nav-text">Netty的零拷贝</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Netty%E5%AF%B9NIO%E7%9A%84%E6%94%AF%E6%8C%81%EF%BC%8C%E5%9C%A8Linux%E4%B8%8A"><span class="nav-number">7.</span> <span class="nav-text">Netty对NIO的支持，在Linux上</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#NettyNioEventLoop%E6%BA%90%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90"><span class="nav-number">7.1.</span> <span class="nav-text">NettyNioEventLoop源代码解析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#NioEventLoop"><span class="nav-number">7.2.</span> <span class="nav-text">NioEventLoop</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -376,7 +507,7 @@ implementation details and internals.<span aria-hidden="true" class="line-number
       <div class="site-state-item site-state-posts">
           <a href="/zhukovaskychina-github.io/archives/">
         
-          <span class="site-state-item-count">19</span>
+          <span class="site-state-item-count">21</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
