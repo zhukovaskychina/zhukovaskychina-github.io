@@ -34,8 +34,9 @@
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/juclightlocks.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/volatileflows.JPG">
 <meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/jvmmemorybarriers.JPG">
+<meta property="og:image" content="https://zhukovaskychina.github.io/zhukovaskychina-github.io/images/juc/synclocks.JPG">
 <meta property="article:published_time" content="2022-08-07T07:12:55.000Z">
-<meta property="article:modified_time" content="2022-08-08T04:21:14.799Z">
+<meta property="article:modified_time" content="2022-08-09T05:31:06.132Z">
 <meta property="article:author" content="zhukovasky">
 <meta property="article:tag" content="java">
 <meta name="twitter:card" content="summary">
@@ -129,7 +130,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">24</span></a>
+    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">27</span></a>
 
   </li>
   </ul>
@@ -192,7 +193,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-08-08 12:21:14" itemprop="dateModified" datetime="2022-08-08T12:21:14+08:00">2022-08-08</time>
+                <time title="修改时间：2022-08-09 13:31:06" itemprop="dateModified" datetime="2022-08-09T13:31:06+08:00">2022-08-09</time>
               </span>
 
           
@@ -607,6 +608,189 @@ inline void     OrderAccess::release_store_ptr_fence(volatile void*     p, void*
 </ul>
 </li>
 </ul>
+<h3 id="重量级锁的概念"><a href="#重量级锁的概念" class="headerlink" title="重量级锁的概念"></a>重量级锁的概念</h3><p><img src="/zhukovaskychina-github.io/././images/juc/synclocks.JPG" alt="重量级锁的概念"></p>
+<h3 id="重量级锁的实现分析"><a href="#重量级锁的实现分析" class="headerlink" title="重量级锁的实现分析"></a>重量级锁的实现分析</h3><p>在开始重量级锁概念之前，我们看下jvm1.8中，在</p>
+<blockquote>
+<p>src&#x2F;share&#x2F;vm&#x2F;runtime&#x2F; <br><br>存在着ObjectMonitor,ObjectWaiter,ObjectSynchronizer</p>
+</blockquote>
+<ul>
+<li>ObjectMonitor<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">class</span> <span class="token class-name">ObjectMonitor</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">enum</span> <span class="token punctuation">&#123;</span>
+                OM_OK<span class="token punctuation">,</span>                    <span class="token comment">// no error</span>
+                OM_SYSTEM_ERROR<span class="token punctuation">,</span>          <span class="token comment">// operating system error</span>
+                OM_ILLEGAL_MONITOR_STATE<span class="token punctuation">,</span> <span class="token comment">// IllegalMonitorStateException</span>
+                OM_INTERRUPTED<span class="token punctuation">,</span>           <span class="token comment">// Thread.interrupt()</span>
+                OM_TIMED_OUT              <span class="token comment">// Object.wait() timed out</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+
+    <span class="token class-name">ObjectMonitor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        _header       <span class="token operator">=</span> NULL<span class="token punctuation">;</span>
+        _count        <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        _waiters      <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">,</span> 
+                _recursions   <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        _object       <span class="token operator">=</span> NULL<span class="token punctuation">;</span>
+        _owner        <span class="token operator">=</span> NULL<span class="token punctuation">;</span>
+        _WaitSet      <span class="token operator">=</span> NULL<span class="token punctuation">;</span>
+        _WaitSetLock  <span class="token operator">=</span> <span class="token number">0</span> <span class="token punctuation">;</span>
+        _Responsible  <span class="token operator">=</span> NULL <span class="token punctuation">;</span>
+        _succ         <span class="token operator">=</span> NULL <span class="token punctuation">;</span>
+        _cxq          <span class="token operator">=</span> NULL <span class="token punctuation">;</span>
+        <span class="token class-name">FreeNext</span>      <span class="token operator">=</span> NULL <span class="token punctuation">;</span>
+        _EntryList    <span class="token operator">=</span> NULL <span class="token punctuation">;</span>
+        _SpinFreq     <span class="token operator">=</span> <span class="token number">0</span> <span class="token punctuation">;</span>
+        _SpinClock    <span class="token operator">=</span> <span class="token number">0</span> <span class="token punctuation">;</span>
+        <span class="token class-name">OwnerIsThread</span> <span class="token operator">=</span> <span class="token number">0</span> <span class="token punctuation">;</span>
+        _previous_owner_tid <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ul>
+<p>每个object的对象里 markOop-&gt;monitor() 里可以保存ObjectMonitor的对象。</p>
+<p>建立ObjectMonitor的算法：</p>
+<p>如果不存在，可以向Thread 的ObjectMonitor 的对象列表中Allocate free objectMonitor 对象。</p>
+<p>每个线程都有ObjectMonitor 的free和used的objectMonitor对象列表,如果没有free objectMonitor对象列表，将向global 中ListLock Allocate为了提高效率。</p>
+<ul>
+<li>ObjectWaiter<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">class</span> <span class="token class-name">ObjectWaiter</span> <span class="token operator">:</span> <span class="token keyword">public</span> <span class="token class-name">StackObj</span> <span class="token punctuation">&#123;</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token keyword">enum</span> <span class="token class-name">TStates</span> <span class="token punctuation">&#123;</span> TS_UNDEF<span class="token punctuation">,</span> TS_READY<span class="token punctuation">,</span> TS_RUN<span class="token punctuation">,</span> TS_WAIT<span class="token punctuation">,</span> TS_ENTER<span class="token punctuation">,</span> TS_CXQ <span class="token punctuation">&#125;</span> <span class="token punctuation">;</span>
+  <span class="token keyword">enum</span> <span class="token class-name">Sorted</span>  <span class="token punctuation">&#123;</span> PREPEND<span class="token punctuation">,</span> APPEND<span class="token punctuation">,</span> SORTED <span class="token punctuation">&#125;</span> <span class="token punctuation">;</span>
+  <span class="token class-name">ObjectWaiter</span> <span class="token operator">*</span> <span class="token keyword">volatile</span> _next<span class="token punctuation">;</span>
+  <span class="token class-name">ObjectWaiter</span> <span class="token operator">*</span> <span class="token keyword">volatile</span> _prev<span class="token punctuation">;</span>
+  <span class="token class-name">Thread</span><span class="token operator">*</span>       _thread<span class="token punctuation">;</span>
+  jlong         _notifier_tid<span class="token punctuation">;</span>
+  <span class="token class-name">ParkEvent</span> <span class="token operator">*</span>   _event<span class="token punctuation">;</span>
+  <span class="token keyword">volatile</span> <span class="token keyword">int</span>  _notified <span class="token punctuation">;</span>
+  <span class="token keyword">volatile</span> <span class="token class-name">TStates</span> <span class="token class-name">TState</span> <span class="token punctuation">;</span>
+  <span class="token class-name">Sorted</span>        _Sorted <span class="token punctuation">;</span>           <span class="token comment">// List placement disposition</span>
+  bool          _active <span class="token punctuation">;</span>           <span class="token comment">// Contention monitoring is enabled</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token class-name">ObjectWaiter</span><span class="token punctuation">(</span><span class="token class-name">Thread</span><span class="token operator">*</span> thread<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">void</span> <span class="token function">wait_reenter_begin</span><span class="token punctuation">(</span><span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span>mon<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">void</span> <span class="token function">wait_reenter_end</span><span class="token punctuation">(</span><span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span>mon<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></li>
+</ul>
+<p>ObjectWaiter 对象里存放thread(线程对象) 和 ParkEvent（线程的unpark）, 每一个等待锁的线程都会有一个ObjectWaiter对象.</p>
+<p>而objectwaiter是个双向链表结构的对象。</p>
+<p>我们可以看到在ObjectMonitor对象里有2个队列成员_WaitSet 和 _EntryList 存放的就是ObjectWaiter<br>_WaitSet：<br>主要存放所有wait的线程的对象，也就是说如果有线程处于wait状态，将被挂入这个队列<br>_EntryList：<br>所有在等待获取锁的线程的对象，也就是说如果有线程处于等待获取锁的状态的时候，将被挂入这个队列。</p>
+<ul>
+<li>ObjectSynchronizer</li>
+</ul>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">class</span> <span class="token class-name">ObjectSynchronizer</span> <span class="token operator">:</span> <span class="token class-name">AllStatic</span> <span class="token punctuation">&#123;</span>
+  friend <span class="token keyword">class</span> <span class="token class-name">VMStructs</span><span class="token punctuation">;</span>
+ <span class="token keyword">public</span><span class="token operator">:</span>
+  typedef <span class="token keyword">enum</span> <span class="token punctuation">&#123;</span>
+    owner_self<span class="token punctuation">,</span>
+    owner_none<span class="token punctuation">,</span>
+    owner_other
+  <span class="token punctuation">&#125;</span> <span class="token class-name">LockOwnership</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">static</span> <span class="token keyword">void</span> fast_enter  <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> <span class="token class-name">BasicLock</span><span class="token operator">*</span> lock<span class="token punctuation">,</span> bool attempt_rebias<span class="token punctuation">,</span> TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> fast_exit   <span class="token punctuation">(</span>oop obj<span class="token punctuation">,</span>    <span class="token class-name">BasicLock</span><span class="token operator">*</span> lock<span class="token punctuation">,</span> <span class="token class-name">Thread</span><span class="token operator">*</span> THREAD<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// WARNING: They are ONLY used to handle the slow cases. They should</span>
+  <span class="token comment">// only be used when the fast cases failed. Use of these functions</span>
+  <span class="token comment">// without previous fast case check may cause fatal error.</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> slow_enter  <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> <span class="token class-name">BasicLock</span><span class="token operator">*</span> lock<span class="token punctuation">,</span> TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> slow_exit   <span class="token punctuation">(</span>oop obj<span class="token punctuation">,</span>    <span class="token class-name">BasicLock</span><span class="token operator">*</span> lock<span class="token punctuation">,</span> <span class="token class-name">Thread</span><span class="token operator">*</span> THREAD<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Used only to handle jni locks or other unmatched monitor enter/exit</span>
+  <span class="token comment">// Internally they will use heavy weight monitor.</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> jni_enter   <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> bool <span class="token function">jni_try_enter</span><span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> <span class="token class-name">Thread</span><span class="token operator">*</span> THREAD<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// Implements Unsafe.tryMonitorEnter</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> jni_exit    <span class="token punctuation">(</span>oop obj<span class="token punctuation">,</span>    <span class="token class-name">Thread</span><span class="token operator">*</span> THREAD<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Handle all interpreter, compiler and jni cases</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> wait               <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> jlong millis<span class="token punctuation">,</span> TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> notify             <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span>               TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> notifyall          <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span>               TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Special internal-use-only method for use by JVM infrastructure</span>
+  <span class="token comment">// that needs to wait() on a java-level object but that can't risk</span>
+  <span class="token comment">// throwing unexpected InterruptedExecutionExceptions.</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> waitUninterruptibly <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> jlong <span class="token class-name">Millis</span><span class="token punctuation">,</span> <span class="token class-name">Thread</span> <span class="token operator">*</span> THREAD<span class="token punctuation">)</span> <span class="token punctuation">;</span>
+
+  <span class="token comment">// used by classloading to free classloader object lock,</span>
+  <span class="token comment">// wait on an internal lock, and reclaim original lock</span>
+  <span class="token comment">// with original recursion count</span>
+  <span class="token keyword">static</span> intptr_t complete_exit  <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span>                TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> reenter            <span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">,</span> intptr_t recursion<span class="token punctuation">,</span> TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// thread-specific and global objectMonitor free list accessors</span>
+<span class="token comment">//  static void verifyInUse (Thread * Self) ; too slow for general assert/debug</span>
+  <span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span> omAlloc <span class="token punctuation">(</span><span class="token class-name">Thread</span> <span class="token operator">*</span> <span class="token class-name">Self</span><span class="token punctuation">)</span> <span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> omRelease <span class="token punctuation">(</span><span class="token class-name">Thread</span> <span class="token operator">*</span> <span class="token class-name">Self</span><span class="token punctuation">,</span> <span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span> m<span class="token punctuation">,</span> bool <span class="token class-name">FromPerThreadAlloc</span><span class="token punctuation">)</span> <span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> omFlush   <span class="token punctuation">(</span><span class="token class-name">Thread</span> <span class="token operator">*</span> <span class="token class-name">Self</span><span class="token punctuation">)</span> <span class="token punctuation">;</span>
+
+  <span class="token comment">// Inflate light weight monitor to heavy weight monitor</span>
+  <span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span> <span class="token function">inflate</span><span class="token punctuation">(</span><span class="token class-name">Thread</span> <span class="token operator">*</span> <span class="token class-name">Self</span><span class="token punctuation">,</span> oop obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// This version is only for internal use</span>
+  <span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span> <span class="token function">inflate_helper</span><span class="token punctuation">(</span>oop obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// Returns the identity hash value for an oop</span>
+  <span class="token comment">// NOTE: It may cause monitor inflation</span>
+  <span class="token keyword">static</span> intptr_t <span class="token function">identity_hash_value_for</span><span class="token punctuation">(</span><span class="token class-name">Handle</span> obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> intptr_t <span class="token class-name">FastHashCode</span> <span class="token punctuation">(</span><span class="token class-name">Thread</span> <span class="token operator">*</span> <span class="token class-name">Self</span><span class="token punctuation">,</span> oop obj<span class="token punctuation">)</span> <span class="token punctuation">;</span>
+
+  <span class="token comment">// java.lang.Thread support</span>
+  <span class="token keyword">static</span> bool <span class="token function">current_thread_holds_lock</span><span class="token punctuation">(</span><span class="token class-name">JavaThread</span><span class="token operator">*</span> thread<span class="token punctuation">,</span> <span class="token class-name">Handle</span> h_obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token class-name">LockOwnership</span> <span class="token function">query_lock_ownership</span><span class="token punctuation">(</span><span class="token class-name">JavaThread</span> <span class="token operator">*</span> self<span class="token punctuation">,</span> <span class="token class-name">Handle</span> h_obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">static</span> <span class="token class-name">JavaThread</span><span class="token operator">*</span> <span class="token function">get_lock_owner</span><span class="token punctuation">(</span><span class="token class-name">Handle</span> h_obj<span class="token punctuation">,</span> bool doLock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// JNI detach support</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">release_monitors_owned_by_thread</span><span class="token punctuation">(</span>TRAPS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">monitors_iterate</span><span class="token punctuation">(</span><span class="token class-name">MonitorClosure</span><span class="token operator">*</span> m<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// GC: we current use aggressive monitor deflation policy</span>
+  <span class="token comment">// Basically we deflate all monitors that are not busy.</span>
+  <span class="token comment">// An adaptive profile-based deflation policy could be used if needed</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">deflate_idle_monitors</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">int</span> <span class="token function">walk_monitor_list</span><span class="token punctuation">(</span><span class="token class-name">ObjectMonitor</span><span class="token operator">*</span><span class="token operator">*</span> listheadp<span class="token punctuation">,</span>
+                               <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token class-name">FreeHeadp</span><span class="token punctuation">,</span>
+                               <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token class-name">FreeTailp</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> bool <span class="token function">deflate_monitor</span><span class="token punctuation">(</span><span class="token class-name">ObjectMonitor</span><span class="token operator">*</span> mid<span class="token punctuation">,</span> oop obj<span class="token punctuation">,</span> <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token class-name">FreeHeadp</span><span class="token punctuation">,</span>
+                              <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token class-name">FreeTailp</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">oops_do</span><span class="token punctuation">(</span><span class="token class-name">OopClosure</span><span class="token operator">*</span> f<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">// debugging</span>
+  <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">verify</span><span class="token punctuation">(</span><span class="token punctuation">)</span> PRODUCT_RETURN<span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token keyword">int</span>  <span class="token function">verify_objmon_isinpool</span><span class="token punctuation">(</span><span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span>addr<span class="token punctuation">)</span> PRODUCT_RETURN0<span class="token punctuation">;</span>
+
+  <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token class-name">RegisterSpinCallback</span> <span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>intptr_t<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> intptr_t<span class="token punctuation">)</span> <span class="token punctuation">;</span>
+
+ <span class="token keyword">private</span><span class="token operator">:</span>
+  <span class="token keyword">enum</span> <span class="token punctuation">&#123;</span> _BLOCKSIZE <span class="token operator">=</span> <span class="token number">128</span> <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span> gBlockList<span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span> <span class="token keyword">volatile</span> gFreeList<span class="token punctuation">;</span>
+  <span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span> <span class="token operator">*</span> <span class="token keyword">volatile</span> gOmInUseList<span class="token punctuation">;</span> <span class="token comment">// for moribund thread, so monitors they inflated still get scanned</span>
+  <span class="token keyword">static</span> <span class="token keyword">int</span> gOmInUseCount<span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<p>在ObjectSynchronizer中定义了wait、notify、notifyAll等方法，也定义了锁升级方法。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span> <span class="token function">inflate</span><span class="token punctuation">(</span><span class="token class-name">Thread</span> <span class="token operator">*</span> <span class="token class-name">Self</span><span class="token punctuation">,</span> oop obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// This version is only for internal use</span>
+<span class="token keyword">static</span> <span class="token class-name">ObjectMonitor</span><span class="token operator">*</span> <span class="token function">inflate_helper</span><span class="token punctuation">(</span>oop obj<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h4 id="Wait-方法实现："><a href="#Wait-方法实现：" class="headerlink" title="Wait 方法实现："></a>Wait 方法实现：</h4><p>ObjectSynchronizer::wait方法</p>
+<p>通过object的对象中找到ObjectMonitor对象</p>
+<p>调用方法</p>
+<p>void ObjectMonitor::wait(jlong millis, bool interruptible, TRAPS)</p>
+<p>通过ObjectMonitor::AddWaiter调用把新建立的ObjectWaiter对象放入到 _WaitSet 的队列的末尾中</p>
+<p>然后在ObjectMonitor::exit释放锁，接着 thread_ParkEvent-&gt;park  也就是wait</p>
+<h4 id="Notify方法的实现："><a href="#Notify方法的实现：" class="headerlink" title="Notify方法的实现："></a>Notify方法的实现：</h4><p>ObjectSynchronizer::notify方法 ，调用ObjectSynchronizer::inflate ，object的对象中找到ObjectMonitor对象 ，然后调用方法ObjectMonitor::notify ，调用ObjectMonitor::DequeueWaiter 摘除第一个ObjectWaiter对象从_WaitSet 的队列中<br>并把这个ObjectWaiter对象放入_EntryList中,_EntryList 存放的是ObjectWaiter的对象列表，列表的大小就是那些所有在等待这个对象锁的线程数。</p>
+<p>注意这里并没有调用ObjectMonitor::exit释放锁</p>
+<h4 id="NotifyALL和Notify-的区别就是"><a href="#NotifyALL和Notify-的区别就是" class="headerlink" title="NotifyALL和Notify 的区别就是"></a>NotifyALL和Notify 的区别就是</h4><p>通过遍历调用ObjectMonitor::DequeueWaiter，把所有的_WaitSet的队列中的ObjectWaiter对象放入到_EntryList中</p>
+<p>关于放入到_EntryList的策略大概有4中Policy，其中还涉及到一个_cxq的队列，先不具体介绍了</p>
+<p>notify, 和notifyAll 都没有释放对象的锁，而是在Synchronizer同步块结束的时候释放</p>
+<p>如何释放锁</p>
+<p>调用ObjectMonitor::exit</p>
+<p>从_EntryList里找到一个ObjectWaiter，因为ObjectWaiter里有线程的_event ParkEvent，调用unpark() 通知ObjectWaite里的线程运行（拿到锁），具体实现在ObjectMonitor::ExitEpilog方法里</p>
 
     </div>
 
@@ -628,7 +812,10 @@ inline void     OrderAccess::release_store_ptr_fence(volatile void*     p, void*
     <a href="/zhukovaskychina-github.io/2022/08/07/juc/juc2/" rel="prev" title="java 并发编程知识总结（二）">
       <i class="fa fa-chevron-left"></i> java 并发编程知识总结（二）
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/zhukovaskychina-github.io/2022/08/08/juc/juc3/" rel="next" title="java 并发编程知识总结（三）">
+      java 并发编程知识总结（三） <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -687,7 +874,7 @@ inline void     OrderAccess::release_store_ptr_fence(volatile void*     p, void*
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">多线程的基本原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E7%90%86%E8%A7%A3synchronized%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">深度理解synchronized实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Java%E4%B8%AD%E7%9A%84synchronized%E5%90%8C%E6%AD%A5%E9%94%81"><span class="nav-number">2.1.</span> <span class="nav-text">Java中的synchronized同步锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MarkWord"><span class="nav-number">2.1.1.</span> <span class="nav-text">MarkWord</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E4%BA%A7%E7%94%9F%E7%9A%84%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6"><span class="nav-number">2.2.</span> <span class="nav-text">死锁产生的必要条件</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#volatile%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">3.</span> <span class="nav-text">volatile关键字</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E7%90%86%E8%A7%A3%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-number">3.1.</span> <span class="nav-text">深度理解可见性问题的本质</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E4%BB%A4%E6%8E%92%E5%BA%8F"><span class="nav-number">3.2.</span> <span class="nav-text">指令排序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JVM%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E6%8C%87%E4%BB%A4"><span class="nav-number">3.3.</span> <span class="nav-text">JVM内存屏障指令</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#volatile%E5%85%B3%E9%94%AE%E5%AD%97%E4%BB%A3%E7%A0%81%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">volatile关键字代码总结</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">多线程的基本原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E7%90%86%E8%A7%A3synchronized%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">深度理解synchronized实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Java%E4%B8%AD%E7%9A%84synchronized%E5%90%8C%E6%AD%A5%E9%94%81"><span class="nav-number">2.1.</span> <span class="nav-text">Java中的synchronized同步锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MarkWord"><span class="nav-number">2.1.1.</span> <span class="nav-text">MarkWord</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E4%BA%A7%E7%94%9F%E7%9A%84%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6"><span class="nav-number">2.2.</span> <span class="nav-text">死锁产生的必要条件</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#volatile%E5%85%B3%E9%94%AE%E5%AD%97"><span class="nav-number">3.</span> <span class="nav-text">volatile关键字</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B7%B1%E5%BA%A6%E7%90%86%E8%A7%A3%E5%8F%AF%E8%A7%81%E6%80%A7%E9%97%AE%E9%A2%98%E7%9A%84%E6%9C%AC%E8%B4%A8"><span class="nav-number">3.1.</span> <span class="nav-text">深度理解可见性问题的本质</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E4%BB%A4%E6%8E%92%E5%BA%8F"><span class="nav-number">3.2.</span> <span class="nav-text">指令排序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JVM%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E6%8C%87%E4%BB%A4"><span class="nav-number">3.3.</span> <span class="nav-text">JVM内存屏障指令</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#volatile%E5%85%B3%E9%94%AE%E5%AD%97%E4%BB%A3%E7%A0%81%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">volatile关键字代码总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E9%87%8F%E7%BA%A7%E9%94%81%E7%9A%84%E6%A6%82%E5%BF%B5"><span class="nav-number">4.0.1.</span> <span class="nav-text">重量级锁的概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%87%8D%E9%87%8F%E7%BA%A7%E9%94%81%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%88%86%E6%9E%90"><span class="nav-number">4.0.2.</span> <span class="nav-text">重量级锁的实现分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Wait-%E6%96%B9%E6%B3%95%E5%AE%9E%E7%8E%B0%EF%BC%9A"><span class="nav-number">4.0.2.1.</span> <span class="nav-text">Wait 方法实现：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Notify%E6%96%B9%E6%B3%95%E7%9A%84%E5%AE%9E%E7%8E%B0%EF%BC%9A"><span class="nav-number">4.0.2.2.</span> <span class="nav-text">Notify方法的实现：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NotifyALL%E5%92%8CNotify-%E7%9A%84%E5%8C%BA%E5%88%AB%E5%B0%B1%E6%98%AF"><span class="nav-number">4.0.2.3.</span> <span class="nav-text">NotifyALL和Notify 的区别就是</span></a></li></ol></li></ol></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -701,7 +888,7 @@ inline void     OrderAccess::release_store_ptr_fence(volatile void*     p, void*
       <div class="site-state-item site-state-posts">
           <a href="/zhukovaskychina-github.io/archives/">
         
-          <span class="site-state-item-count">24</span>
+          <span class="site-state-item-count">27</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
