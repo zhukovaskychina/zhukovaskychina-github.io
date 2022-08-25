@@ -12,12 +12,12 @@
 
 <link rel="stylesheet" href="/zhukovaskychina-github.io/css/main.css">
 
-
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
 <link rel="stylesheet" href="/zhukovaskychina-github.io/lib/font-awesome/css/all.min.css">
 
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"zhukovaskychina.github.io","root":"/zhukovaskychina-github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+    var CONFIG = {"hostname":"zhukovaskychina.github.io","root":"/zhukovaskychina-github.io/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
   <meta name="description" content="技术宅的世界">
@@ -118,7 +118,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">27</span></a>
+    <a href="/zhukovaskychina-github.io/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">32</span></a>
 
   </li>
   </ul>
@@ -146,6 +146,150 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/13/rocketmq/rocketmq/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
+      <meta itemprop="name" content="zhukovasky">
+      <meta itemprop="description" content="技术宅的世界">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zhukovasky的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/zhukovaskychina-github.io/2022/08/13/rocketmq/rocketmq/" class="post-title-link" itemprop="url">消息队列Rocketmq架构分析</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-08-13 15:12:55" itemprop="dateCreated datePublished" datetime="2022-08-13T15:12:55+08:00">2022-08-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-08-25 13:35:18" itemprop="dateModified" datetime="2022-08-25T13:35:18+08:00">2022-08-25</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>出去面试的时候，总是有面试官喜欢问Rocketmq，今天就在这里做一个详细的整理。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/zhukovaskychina-github.io/2022/08/13/rocketmq/rocketmq/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/13/rocketmq/rocketmq1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
+      <meta itemprop="name" content="zhukovasky">
+      <meta itemprop="description" content="技术宅的世界">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zhukovasky的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/zhukovaskychina-github.io/2022/08/13/rocketmq/rocketmq1/" class="post-title-link" itemprop="url">消息队列Rocketmq整理</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-08-13 15:12:55" itemprop="dateCreated datePublished" datetime="2022-08-13T15:12:55+08:00">2022-08-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-08-24 17:47:07" itemprop="dateModified" datetime="2022-08-24T17:47:07+08:00">2022-08-24</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>出去面试的时候，总是有面试官喜欢问Rocketmq，今天就在这里做一个详细的整理。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/zhukovaskychina-github.io/2022/08/13/rocketmq/rocketmq1/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -193,6 +337,78 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/zhukovaskychina-github.io/2022/08/10/juc/juc5/">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/10/raft/raft/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
+      <meta itemprop="name" content="zhukovasky">
+      <meta itemprop="description" content="技术宅的世界">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="zhukovasky的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/zhukovaskychina-github.io/2022/08/10/raft/raft/" class="post-title-link" itemprop="url">Raft协议算法</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-08-10 15:12:55" itemprop="dateCreated datePublished" datetime="2022-08-10T15:12:55+08:00">2022-08-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-08-12 12:53:25" itemprop="dateModified" datetime="2022-08-12T12:53:25+08:00">2022-08-12</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>出去面试的时候，总是有面试官喜欢问高并发，今天就在这里做一个详细的整理。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/zhukovaskychina-github.io/2022/08/10/raft/raft/">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -504,7 +720,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/07/mysql/mysql/">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/07/juc/juc6/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
@@ -518,7 +734,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/zhukovaskychina-github.io/2022/08/07/mysql/mysql/" class="post-title-link" itemprop="url">mysql 老大难知识总结</a>
+            <a href="/zhukovaskychina-github.io/2022/08/07/juc/juc6/" class="post-title-link" itemprop="url">java 并发编程知识总结（六）</a>
         </h2>
 
         <div class="post-meta">
@@ -535,7 +751,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-08-08 10:15:31" itemprop="dateModified" datetime="2022-08-08T10:15:31+08:00">2022-08-08</time>
+                <time title="修改时间：2022-08-17 14:43:48" itemprop="dateModified" datetime="2022-08-17T14:43:48+08:00">2022-08-17</time>
               </span>
 
           
@@ -549,10 +765,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>出去面试的时候，总是有面试官喜欢问mysql，今天就在这里做一个详细的整理。</p>
+          <p>出去面试的时候，总是有面试官喜欢问ThreadLocal，今天就在这里做一个详细的整理。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/zhukovaskychina-github.io/2022/08/07/mysql/mysql/">
+              <a class="btn" href="/zhukovaskychina-github.io/2022/08/07/juc/juc6/">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -576,7 +792,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/06/nacos/nacos2/">
+    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/07/designpattern/patterndesign/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
@@ -590,139 +806,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos2/" class="post-title-link" itemprop="url">nacos config的源码分析(二)</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2022-08-06 16:53:21 / 修改时间：23:41:28" itemprop="dateCreated datePublished" datetime="2022-08-06T16:53:21+08:00">2022-08-06</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>nacos的源码分析，出去面试的时候，不少面试官总是笑眯眯的问NACOS的原理如何，今天在这里做一次源码分析的总结</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos2/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/06/nacos/nacos3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
-      <meta itemprop="name" content="zhukovasky">
-      <meta itemprop="description" content="技术宅的世界">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="zhukovasky的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos3/" class="post-title-link" itemprop="url">nacos config的源码分析(三)</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2022-08-06 16:53:21 / 修改时间：23:41:46" itemprop="dateCreated datePublished" datetime="2022-08-06T16:53:21+08:00">2022-08-06</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>nacos的源码分析，出去面试的时候，不少面试官总是笑眯眯的问NACOS的原理如何，今天在这里做一次源码分析的总结</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/zhukovaskychina-github.io/2022/08/06/nacos/nacos3/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/06/netty/netty2/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
-      <meta itemprop="name" content="zhukovasky">
-      <meta itemprop="description" content="技术宅的世界">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="zhukovasky的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/zhukovaskychina-github.io/2022/08/06/netty/netty2/" class="post-title-link" itemprop="url">netty 源码分析(二)</a>
+            <a href="/zhukovaskychina-github.io/2022/08/07/designpattern/patterndesign/" class="post-title-link" itemprop="url">设计模式总结</a>
         </h2>
 
         <div class="post-meta">
@@ -732,14 +816,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2022-08-06 16:53:21" itemprop="dateCreated datePublished" datetime="2022-08-06T16:53:21+08:00">2022-08-06</time>
+              <time title="创建时间：2022-08-07 15:12:55" itemprop="dateCreated datePublished" datetime="2022-08-07T15:12:55+08:00">2022-08-07</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-08-07 13:47:14" itemprop="dateModified" datetime="2022-08-07T13:47:14+08:00">2022-08-07</time>
+                <time title="修改时间：2022-08-13 18:36:34" itemprop="dateModified" datetime="2022-08-13T18:36:34+08:00">2022-08-13</time>
               </span>
 
           
@@ -753,82 +837,10 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>netty的源码分析，出去面试的时候，不少面试官总是笑眯眯的问netty的原理如何，今天在这里做一次源码分析的总结</p>
+          <p>出去面试的时候，总是有面试官喜欢问设计模式，今天就在这里做一个详细的整理。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/zhukovaskychina-github.io/2022/08/06/netty/netty2/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://zhukovaskychina.github.io/zhukovaskychina-github.io/2022/08/05/netty/netty/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/zhukovaskychina-github.io/images/avatar.gif">
-      <meta itemprop="name" content="zhukovasky">
-      <meta itemprop="description" content="技术宅的世界">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="zhukovasky的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/zhukovaskychina-github.io/2022/08/05/netty/netty/" class="post-title-link" itemprop="url">netty 源码分析(一)</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-08-05 16:53:21" itemprop="dateCreated datePublished" datetime="2022-08-05T16:53:21+08:00">2022-08-05</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2022-08-07 10:20:22" itemprop="dateModified" datetime="2022-08-07T10:20:22+08:00">2022-08-07</time>
-              </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>netty的源码分析，出去面试的时候，不少面试官总是笑眯眯的问netty的原理如何，今天在这里做一次源码分析的总结</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/zhukovaskychina-github.io/2022/08/05/netty/netty/">
+              <a class="btn" href="/zhukovaskychina-github.io/2022/08/07/designpattern/patterndesign/">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -851,7 +863,7 @@
 
   
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/zhukovaskychina-github.io/page/2/">2</a><a class="page-number" href="/zhukovaskychina-github.io/page/3/">3</a><a class="extend next" rel="next" href="/zhukovaskychina-github.io/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <span class="page-number current">1</span><a class="page-number" href="/zhukovaskychina-github.io/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/zhukovaskychina-github.io/page/4/">4</a><a class="extend next" rel="next" href="/zhukovaskychina-github.io/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 
@@ -917,7 +929,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/zhukovaskychina-github.io/archives/">
         
-          <span class="site-state-item-count">27</span>
+          <span class="site-state-item-count">32</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
